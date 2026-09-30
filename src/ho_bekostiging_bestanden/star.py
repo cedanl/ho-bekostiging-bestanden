@@ -13,6 +13,7 @@ import polars as pl
 
 from ho_bekostiging_bestanden.decode import STATUS_SCHEIDING, STATUS_VELD
 from ho_bekostiging_bestanden.ingest import LEVERING, SCHEMA_PER_LEVERING
+from ho_bekostiging_bestanden.kwaliteit import SHA256_KOLOM
 from ho_bekostiging_bestanden.metadata import load_codelijst, load_schema
 from ho_bekostiging_bestanden.stack import LABEL_COL
 
@@ -42,6 +43,7 @@ DIM_LEVERING_SCHEMA = {
     "DatumAanmaak": pl.Date,
     "BrinOntvanger": pl.Utf8,
     "Bestandsnaam": pl.Utf8,
+    SHA256_KOLOM: pl.Utf8,
     "Gepseudonimiseerd": pl.Boolean,
 }
 

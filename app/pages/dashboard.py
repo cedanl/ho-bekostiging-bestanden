@@ -10,7 +10,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import _huisstijl as hs
 from _chart_docs import chart_help
-from _utils import datamodel_dir, lees_star
+from _utils import datamodel_dir, kwaliteitsbanner, lees_star
 
 from ho_bekostiging_bestanden import indicatoren as ind
 from ho_bekostiging_bestanden.stack import LABEL_COL
@@ -167,6 +167,7 @@ def _tab_historie(star: dict[str, pl.DataFrame]) -> None:
 
 
 st.title("Dashboard")
+kwaliteitsbanner()
 
 datamodel = datamodel_dir()
 star = _star(str(datamodel), _mtime(datamodel))

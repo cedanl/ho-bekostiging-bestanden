@@ -6,11 +6,16 @@ de uitvoer wordt dan wel geschreven, maar ``poort`` gooit ``KwaliteitsFout``.
 """
 
 import json
+import platform
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import polars as pl
 
+from ho_bekostiging_bestanden import __version__
+from ho_bekostiging_bestanden.ingest import SCHEMA_PER_LEVERING
+from ho_bekostiging_bestanden.metadata import load_schema
 from ho_bekostiging_bestanden.stack import LABEL_COL
 
 ERNST_ERROR = "error"
@@ -22,6 +27,8 @@ QUALITY_JSON = "quality.json"
 STAR_BRON = "star schema"
 ERNST_KOLOM = "Ernst"
 BRON_KOLOM = "Bron"
+SHA256_KOLOM = "Sha256"
+QUALITY_SCHEMA_VERSIE = 1
 
 MELDING_SCHEMA = {
     "Controle": pl.Utf8,
@@ -101,28 +108,77 @@ def _onderdeel(meldingen: pl.DataFrame, bron: str) -> dict[str, Any]:
     return {"status": status(eigen), "meldingen": _als_lijst(eigen)}
 
 
+def dekking(
+    stacked: dict[str, pl.DataFrame], dim_levering: pl.DataFrame
+) -> list[dict[str, Any]]:
+    """Rijen per levering × recordsoort uit het schema van die soort levering.
+
+    Recordsoorten komen uit de schema-TOML's; een recordsoort zonder rijen
+    telt als 0, zodat een ontbrekend deel van de levering zichtbaar is.
+    """
+    uitkomst = []
+    for label, soort in dim_levering.select(LABEL_COL, "SoortLevering").iter_rows():
+        schema_naam = SCHEMA_PER_LEVERING.get(soort) if soort else None
+        if schema_naam is None:
+            continue
+        for rs in load_schema(schema_naam):
+            df = stacked.get(rs)
+            rijen = 0 if df is None else df.filter(pl.col(LABEL_COL) == label).height
+            uitkomst.append({"levering": label, "recordsoort": rs, "rijen": rijen})
+    return uitkomst
+
+
+def _provenance() -> dict[str, str]:
+    return {
+        "pakketversie": __version__,
+        "python": platform.python_version(),
+        "polars": pl.__version__,
+        "aangemaakt": datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+
+
 def bouw_rapport(
-    meldingen: pl.DataFrame, dim_levering: pl.DataFrame, fouten_toegestaan: bool
+    meldingen: pl.DataFrame,
+    dim_levering: pl.DataFrame,
+    fouten_toegestaan: bool,
+    dekking: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Inhoud van ``quality.json``: status, totalen, per levering en star.
+    """Inhoud van ``quality.json`` (zie ``metadata/quality.schema.json``).
 
     Args:
         meldingen:         Alle meldingen (``RAPPORT_SCHEMA``).
-        dim_levering:      Levert de leveringslabels (kolom ``LABEL_COL``).
+        dim_levering:      Leveringslabels met bestandsnaam en sha256.
         fouten_toegestaan: Of de aanroeper een ``fail`` toestaat.
+        dekking:           Uitvoer van :func:`dekking`.
     """
     labels = dim_levering[LABEL_COL].to_list()
     # Een verouderde prepared-map kan meldingen hebben zonder rij in dim_levering.
     labels += sorted(set(meldingen[BRON_KOLOM].to_list()) - set(labels) - {STAR_BRON})
+    herkomstvelden = [
+        k for k in ("Bestandsnaam", SHA256_KOLOM) if k in dim_levering.columns
+    ]
+    herkomst = {
+        rij[LABEL_COL]: rij
+        for rij in dim_levering.select(LABEL_COL, *herkomstvelden).iter_rows(named=True)
+    }
     return {
+        "schema_version": QUALITY_SCHEMA_VERSIE,
         "status": status(meldingen),
         "fouten_toegestaan": fouten_toegestaan,
         "total_errors": aantal(meldingen, ERNST_ERROR),
         "total_warnings": aantal(meldingen, ERNST_WARNING),
+        "provenance": _provenance(),
         "leveringen": [
-            {"levering": label, **_onderdeel(meldingen, label)} for label in labels
+            {
+                "levering": label,
+                "bestandsnaam": herkomst.get(label, {}).get("Bestandsnaam"),
+                "sha256": herkomst.get(label, {}).get(SHA256_KOLOM),
+                **_onderdeel(meldingen, label),
+            }
+            for label in labels
         ],
         "star": _onderdeel(meldingen, STAR_BRON),
+        "dekking": dekking,
     }
 
 

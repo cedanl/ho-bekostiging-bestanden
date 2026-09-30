@@ -1,5 +1,6 @@
 """Orkestratie van de ingestion-pipeline: ingest > decode > validate > export."""
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,9 +28,11 @@ from ho_bekostiging_bestanden.kwaliteit import (
     MELDING_SCHEMA,
     QUALITY_JSON,
     RAPPORT_SCHEMA,
+    SHA256_KOLOM,
     STAR_BRON,
     STATUS_OK,
     bouw_rapport,
+    dekking,
     melding,
     meldingen_frame,
     met_bron,
@@ -76,7 +79,11 @@ def detect_levering(path: str | Path) -> str | None:
 
 
 def _levering_tabel(
-    info: Bestandsinfo, vlp: pl.DataFrame, schema_name: str, gepseudonimiseerd: bool
+    info: Bestandsinfo,
+    vlp: pl.DataFrame,
+    schema_name: str,
+    gepseudonimiseerd: bool,
+    sha256: str,
 ) -> pl.DataFrame:
     return pl.DataFrame(
         {
@@ -85,6 +92,7 @@ def _levering_tabel(
             "DatumAanmaak": [vlp["DatumAanmaak"][0]],
             "BrinOntvanger": [vlp["BRIN"][0]],
             "Bestandsnaam": [info.bestandsnaam],
+            SHA256_KOLOM: [sha256],
             "SchemaVersie": [str(schema_meta(schema_name)["schema_version"])],
             "Gepseudonimiseerd": [gepseudonimiseerd],
         },
@@ -94,6 +102,7 @@ def _levering_tabel(
             "DatumAanmaak": pl.Date,
             "BrinOntvanger": pl.Utf8,
             "Bestandsnaam": pl.Utf8,
+            SHA256_KOLOM: pl.Utf8,
             "SchemaVersie": pl.Utf8,
             "Gepseudonimiseerd": pl.Boolean,
         },
@@ -157,7 +166,11 @@ def run_pipeline(
     rapport = valideer(frames, schema_name, info)
     uitvoer = {rs: df for rs, df in frames.items() if rs != MELDINGEN}
     uitvoer[LEVERING] = _levering_tabel(
-        info, frames[VOORLOOP], schema_name, pseudonimiseer
+        info,
+        frames[VOORLOOP],
+        schema_name,
+        pseudonimiseer,
+        hashlib.sha256(Path(source).read_bytes()).hexdigest(),
     )
     uitvoer[VALIDATIE] = rapport
     _maak_leeg(Path(target))
@@ -207,9 +220,11 @@ def _bouw_star(
     star = build_star(stacked)
     meldingen = pl.concat([_leveringmeldingen(sources, stacked), _star_meldingen(star)])
     export_frames(star, Path(target) / DATAMODEL_MAP)
-    schrijf_rapport(
-        bouw_rapport(meldingen, star["dim_levering"], fouten_toegestaan), Path(target)
+    dim_levering = star["dim_levering"]
+    rapport = bouw_rapport(
+        meldingen, dim_levering, fouten_toegestaan, dekking(stacked, dim_levering)
     )
+    schrijf_rapport(rapport, Path(target))
     return star, meldingen
 
 

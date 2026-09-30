@@ -23,8 +23,9 @@ TABEL_DOCS: dict[str, dict[str, str]] = {
         "wat": (
             "Eén regel per verwerkt bestand: soort levering (VLPBEK = voorlopig, "
             "DEFBEK = definitief, HISBEK = historisch), bekostigingsjaar, "
-            "aanmaakdatum, de instelling (BRIN) die het bestand ontving en of "
-            "BSN en onderwijsnummer gepseudonimiseerd zijn."
+            "aanmaakdatum, de instelling (BRIN) die het bestand ontving, de "
+            "sha256 van het bronbestand (om na te gaan welk bestand precies "
+            "verwerkt is) en of BSN en onderwijsnummer gepseudonimiseerd zijn."
         ),
         "bron": "Bestandsnaam en voorlooprecord (VLP) van elk bestand.",
     },

@@ -1,3 +1,4 @@
+import hashlib
 import json
 from datetime import date
 
@@ -41,6 +42,7 @@ def test_run_pipeline_vlpbek(tmp_path, vlpbek_bestand):
         "DatumAanmaak": date(2024, 1, 15),
         "BrinOntvanger": "99XX",
         "Bestandsnaam": "VLPBEK_2025_20240115_99XX.csv",
+        "Sha256": hashlib.sha256(vlpbek_bestand.read_bytes()).hexdigest(),
         "SchemaVersie": "26.3.1",
         "Gepseudonimiseerd": True,
     }

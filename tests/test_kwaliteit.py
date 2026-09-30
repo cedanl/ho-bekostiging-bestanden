@@ -47,14 +47,22 @@ def test_poort_gooit_alleen_bij_fail():
 
 
 def test_rapport_round_trip_met_niet_ascii(tmp_path):
-    dim_levering = pl.DataFrame({LABEL_COL: ["lev_a", "lev_b"]})
+    dim_levering = pl.DataFrame(
+        {
+            LABEL_COL: ["lev_a", "lev_b"],
+            "Bestandsnaam": ["a.csv", None],
+            "Sha256": [None, None],
+        },
+        schema_overrides={"Sha256": pl.Utf8},
+    )
     meldingen = pl.concat(
         [
             met_bron(meldingen_frame([_m(ERNST_ERROR)]), "lev_a"),
             met_bron(meldingen_frame([_m(ERNST_WARNING)]), STAR_BRON),
         ]
     )
-    rapport = bouw_rapport(meldingen, dim_levering, fouten_toegestaan=True)
+    rapport = bouw_rapport(meldingen, dim_levering, fouten_toegestaan=True, dekking=[])
+    assert rapport["leveringen"][0]["bestandsnaam"] == "a.csv"
     assert rapport["status"] == STATUS_FAIL
     assert (rapport["total_errors"], rapport["total_warnings"]) == (1, 1)
     assert rapport["fouten_toegestaan"] is True

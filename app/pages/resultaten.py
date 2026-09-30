@@ -8,7 +8,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from _tabel_docs import PAGINA_INTRO, tabel_help
-from _utils import datamodel_dir
+from _utils import datamodel_dir, kwaliteitsbanner
 
 from ho_bekostiging_bestanden.star import STAR_TABELLEN
 
@@ -31,6 +31,7 @@ def _tabel_csv(pad: str, mtime: float) -> str:
 
 
 st.title("Resultaten")
+kwaliteitsbanner()
 st.info(PAGINA_INTRO)
 
 datamodel = datamodel_dir()

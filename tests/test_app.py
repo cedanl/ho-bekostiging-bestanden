@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -135,3 +136,20 @@ def test_home_toont_errors_bij_fail(tmp_path, monkeypatch):
     assert not at.exception
     assert any("Kwaliteitsstatus fail" in e.value for e in at.error)
     assert not at.success
+
+
+@pytest.mark.parametrize("pagina", ["dashboard", "resultaten"])
+def test_banner_bij_fail(app_config, pagina):
+    uit = app_config / "out"
+    uit.mkdir(parents=True, exist_ok=True)
+    (uit / "quality.json").write_text(
+        json.dumps({"status": "fail", "total_errors": 2}), encoding="utf-8"
+    )
+    at = _pagina(pagina).run()
+    assert not at.exception
+    assert any("Kwaliteitsstatus fail" in e.value for e in at.error)
+
+
+def test_geen_banner_zonder_rapport(app_config):
+    at = _pagina("resultaten").run()
+    assert not at.error

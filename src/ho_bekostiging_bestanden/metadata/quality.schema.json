@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HO-bekostigingsbestanden quality.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "fouten_toegestaan",
+    "total_errors",
+    "total_warnings",
+    "provenance",
+    "leveringen",
+    "star",
+    "dekking"
+  ],
+  "$defs": {
+    "status": {"enum": ["ok", "warn", "fail"]},
+    "melding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["controle", "recordsoort", "melding", "aantal", "ernst"],
+      "properties": {
+        "controle": {"type": "string"},
+        "recordsoort": {"type": "string"},
+        "melding": {"type": "string"},
+        "aantal": {"type": "integer", "minimum": 0},
+        "ernst": {"enum": ["error", "warning"]}
+      }
+    },
+    "meldingen": {"type": "array", "items": {"$ref": "#/$defs/melding"}}
+  },
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"$ref": "#/$defs/status"},
+    "fouten_toegestaan": {"type": "boolean"},
+    "total_errors": {"type": "integer", "minimum": 0},
+    "total_warnings": {"type": "integer", "minimum": 0},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pakketversie", "python", "polars", "aangemaakt"],
+      "properties": {
+        "pakketversie": {"type": "string"},
+        "python": {"type": "string"},
+        "polars": {"type": "string"},
+        "aangemaakt": {"type": "string", "format": "date-time"}
+      }
+    },
+    "leveringen": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["levering", "bestandsnaam", "sha256", "status", "meldingen"],
+        "properties": {
+          "levering": {"type": "string"},
+          "bestandsnaam": {"type": ["string", "null"]},
+          "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+          "status": {"$ref": "#/$defs/status"},
+          "meldingen": {"$ref": "#/$defs/meldingen"}
+        }
+      }
+    },
+    "star": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "meldingen"],
+      "properties": {
+        "status": {"$ref": "#/$defs/status"},
+        "meldingen": {"$ref": "#/$defs/meldingen"}
+      }
+    },
+    "dekking": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["levering", "recordsoort", "rijen"],
+        "properties": {
+          "levering": {"type": "string"},
+          "recordsoort": {"type": "string"},
+          "rijen": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  }
+}
