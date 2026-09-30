@@ -17,6 +17,7 @@ ho = "ho_bekostiging_bestanden.cli:main"
 
 [dependency-groups]
 dev = [
+    "jsonschema>=4.26.0",
     "pytest>=8.0",
     "ruff>=0.6",
     "ty>=0.0.0a1",
@@ -39,7 +40,10 @@ target-version = "py313"
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "PLW1514"]
+# PLW1514 (unspecified-encoding) is een preview-regel; alleen die aanzetten.
+preview = true
+explicit-preview-rules = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

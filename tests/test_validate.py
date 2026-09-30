@@ -2,7 +2,12 @@ import pytest
 
 from ho_bekostiging_bestanden.decode import decode_frames
 from ho_bekostiging_bestanden.ingest import parse_bestandsnaam, read_multi_record_csv
-from ho_bekostiging_bestanden.validate import VALIDATIE_SCHEMA, valideer
+from ho_bekostiging_bestanden.kwaliteit import (
+    ERNST_ERROR,
+    ERNST_WARNING,
+    MELDING_SCHEMA,
+)
+from ho_bekostiging_bestanden.validate import valideer
 
 from .conftest import analyse_regels, maak_regel, schrijf_bestand
 
@@ -23,7 +28,7 @@ def _valideer(tmp_path, regels, naam=NAAM):
 
 def test_schoon_bestand_geeft_geen_meldingen(tmp_path):
     rapport = _valideer(tmp_path, analyse_regels())
-    assert rapport.schema == VALIDATIE_SCHEMA
+    assert rapport.schema == MELDING_SCHEMA
     assert rapport.height == 0
 
 
@@ -66,12 +71,44 @@ def test_onbekende_code(tmp_path):
     ]
 
 
-def test_brin_in_naam_wijkt_af(tmp_path):
+def test_brin_in_naam_wijkt_af_is_error(tmp_path):
     rapport = _valideer(
         tmp_path, analyse_regels(), naam="VLPBEK_2025_20240115_00AA.csv"
     )
-    assert rapport["Controle"].to_list() == ["Bestandsnaam"]
+    assert rapport["Controle"].to_list() == ["BRIN"]
+    assert rapport["Ernst"].to_list() == [ERNST_ERROR]
     assert "00AA" in rapport["Melding"][0]
+
+
+def test_jaar_in_naam_wijkt_af_is_warning(tmp_path):
+    rapport = _valideer(
+        tmp_path, analyse_regels(), naam="VLPBEK_2024_20240115_99XX.csv"
+    )
+    assert rapport["Controle"].to_list() == ["Bekostigingsjaar"]
+    assert rapport["Ernst"].to_list() == [ERNST_WARNING]
+
+
+def test_onbekende_code_is_warning(tmp_path):
+    rapport = _valideer(tmp_path, analyse_regels(statussen=("pi", "zz", "mv")))
+    assert rapport["Ernst"].to_list() == [ERNST_WARNING]
+
+
+@pytest.mark.parametrize(
+    "wijziging",
+    ["onbekende_recordsoort", "extra_veld", "slr", "verplicht"],
+)
+def test_structurele_afwijking_is_error(tmp_path, wijziging):
+    regels = analyse_regels()
+    if wijziging == "onbekende_recordsoort":
+        regels.insert(1, "XYZ|x")
+    elif wijziging == "extra_veld":
+        regels[2] = regels[2] + "|" * 30 + "EXTRA"
+    elif wijziging == "slr":
+        regels[-1] = regels[-1].replace("|3|", "|4|", 1)
+    else:
+        regels[2] = regels[2].replace("|34001|", "||", 1)
+    rapport = _valideer(tmp_path, regels)
+    assert ERNST_ERROR in rapport["Ernst"].to_list(), rapport.to_dicts()
 
 
 def test_meldingen_uit_ingest_komen_mee(tmp_path):

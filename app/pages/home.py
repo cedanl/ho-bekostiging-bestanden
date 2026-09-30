@@ -8,9 +8,15 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from _huisstijl import hero
-from _utils import output_dir, prepared_dir, raw_dir
+from _utils import output_dir, prepared_dir, pseudonimiseringssleutel, raw_dir
 
 from ho_bekostiging_bestanden.ingest import parse_bestandsnaam
+from ho_bekostiging_bestanden.kwaliteit import (
+    ERNST_ERROR,
+    ERNST_KOLOM,
+    ERNST_WARNING,
+    STATUS_FAIL,
+)
 from ho_bekostiging_bestanden.pipeline import (
     detect_levering,
     onherkende_bestanden,
@@ -19,6 +25,16 @@ from ho_bekostiging_bestanden.pipeline import (
 )
 
 UPLOAD_MAP = "upload"
+GEEN_PSEUDONIMISERING_MELDING = (
+    "Pseudonimisering staat uit: BSN en onderwijsnummer blijven leesbaar in de "
+    "output. Koppelen met gepseudonimiseerde 1CHO-data kan dan niet; deel de "
+    "output niet buiten de eigen instelling."
+)
+DEMO_SLEUTEL_MELDING = (
+    "Demo-sleutel actief (uit `app/config.toml`): alleen geschikt voor de "
+    "synthetische demo-data. Voor echte data en koppeling met 1CHO zet je "
+    "`EENCIJFERHO_ENCRYPT_KEY` op dezelfde sleutel als in 1cijferho."
+)
 
 
 def _overzicht(bestanden: list[Path]) -> pl.DataFrame:
@@ -87,20 +103,56 @@ if not bestanden:
 st.subheader(f"{len(bestanden)} bestand(en) gevonden")
 st.dataframe(_overzicht(bestanden), hide_index=True, width="stretch")
 
-if st.button("Verwerk alles", type="primary", key="verwerk_alles"):
+pseudonimiseer = st.checkbox(
+    "Pseudonimiseer BSN en onderwijsnummer (aanbevolen; nodig voor koppeling met 1CHO)",
+    value=True,
+    key="pseudonimiseer",
+)
+sleutelstatus = pseudonimiseringssleutel()
+if not pseudonimiseer:
+    st.warning(GEEN_PSEUDONIMISERING_MELDING)
+elif sleutelstatus.fout:
+    st.error(f"Verwerken kan nog niet: {sleutelstatus.fout}")
+elif sleutelstatus.is_demo:
+    st.warning(DEMO_SLEUTEL_MELDING)
+
+if st.button(
+    "Verwerk alles",
+    type="primary",
+    key="verwerk_alles",
+    disabled=pseudonimiseer and sleutelstatus.sleutel is None,
+):
     with st.spinner("Bezig met verwerken…"):
-        resultaat = verwerk_alles(raw, prepared_dir(), output_dir())
+        resultaat = verwerk_alles(
+            raw,
+            prepared_dir(),
+            output_dir(),
+            sleutel=sleutelstatus.sleutel if pseudonimiseer else None,
+            pseudonimiseer=pseudonimiseer,
+        )
     for naam, fout in resultaat.fouten.items():
         st.error(f"**{naam}** kon niet worden verwerkt: {fout}")
-    for naam, rapport in resultaat.validatie.items():
-        if not rapport.is_empty():
-            with st.expander(f"⚠️ {naam}: {rapport.height} controle(s) met meldingen"):
-                st.dataframe(rapport, hide_index=True, width="stretch")
-    totaal = sum(df.height for df in resultaat.star.values())
-    st.success(
-        f"{len(resultaat.prepared_dirs)} bestand(en) verwerkt; star schema met "
-        f"{len(resultaat.star)} tabellen en {totaal:,} rijen."
-    )
+    meldingen = resultaat.meldingen
+    fouten = meldingen.filter(pl.col(ERNST_KOLOM) == ERNST_ERROR)
+    waarschuwingen = meldingen.filter(pl.col(ERNST_KOLOM) == ERNST_WARNING)
+    if resultaat.status == STATUS_FAIL:
+        st.error(
+            f"Kwaliteitsstatus fail: {fouten.height} error(s). Het star schema is "
+            "geschreven, maar de cijfers zijn niet betrouwbaar. Los de errors "
+            "hieronder op en verwerk opnieuw."
+        )
+        st.dataframe(fouten.drop(ERNST_KOLOM), hide_index=True, width="stretch")
+    if not waarschuwingen.is_empty():
+        with st.expander(f"⚠️ {waarschuwingen.height} waarschuwing(en)"):
+            st.dataframe(
+                waarschuwingen.drop(ERNST_KOLOM), hide_index=True, width="stretch"
+            )
+    if resultaat.status != STATUS_FAIL:
+        totaal = sum(df.height for df in resultaat.star.values())
+        st.success(
+            f"{len(resultaat.prepared_dirs)} bestand(en) verwerkt; star schema met "
+            f"{len(resultaat.star)} tabellen en {totaal:,} rijen."
+        )
 
 col_dash, col_res = st.columns(2)
 with col_dash:

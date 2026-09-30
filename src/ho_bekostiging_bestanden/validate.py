@@ -1,8 +1,9 @@
 """Kwaliteitscontroles op een ingelezen levering.
 
-De controles houden de verwerking niet tegen: ze leveren een rapport op dat
-in de app en in de tabel ``VALIDATIE`` getoond wordt. Alleen een ontbrekend
-voorlooprecord is fataal, omdat de levering dan niet te plaatsen is.
+Elke melding heeft een ernst (``ERNST_PER_CONTROLE``). Een error zet de
+levering op ``fail``; de pipeline schrijft de uitvoer dan wel weg, maar sluit
+daarna de kwaliteitspoort (zie ``kwaliteit.poort``). Alleen een ontbrekend
+voorlooprecord is direct fataal, omdat de levering dan niet te plaatsen is.
 """
 
 import re
@@ -11,26 +12,34 @@ import polars as pl
 
 from ho_bekostiging_bestanden.decode import STATUS_SCHEIDING
 from ho_bekostiging_bestanden.ingest import MELDINGEN, Bestandsinfo
+from ho_bekostiging_bestanden.kwaliteit import (
+    ERNST_ERROR,
+    ERNST_WARNING,
+    melding,
+    meldingen_frame,
+)
 from ho_bekostiging_bestanden.metadata import load_codelijst, load_schema
 
-VALIDATIE_SCHEMA = {
-    "Controle": pl.Utf8,
-    "Recordsoort": pl.Utf8,
-    "Melding": pl.Utf8,
-    "Aantal": pl.Int64,
-}
 VOORLOOP = "VLP"
 SLUIT = "SLR"
 _SLR_VELD_RE = re.compile(r"^Aantal([A-Z]{3})records$")
 
+# Ernst per controle. Een onbekende code is een warning: dim_status vangt die
+# op als "Onbekende code". Een ander jaar in de bestandsnaam is een warning,
+# want de VLP is leidend; een andere BRIN is een error (verkeerde instelling).
+ERNST_PER_CONTROLE = {
+    "Inlezen": ERNST_ERROR,
+    "Aantal records": ERNST_ERROR,
+    "Eén rij": ERNST_ERROR,
+    "Verplicht veld": ERNST_ERROR,
+    "BRIN": ERNST_ERROR,
+    "Bekostigingsjaar": ERNST_WARNING,
+    "Codelijst": ERNST_WARNING,
+}
 
-def _melding(controle: str, rs: str, melding: str, aantal: int = 1) -> dict:
-    return {
-        "Controle": controle,
-        "Recordsoort": rs,
-        "Melding": melding,
-        "Aantal": aantal,
-    }
+
+def _melding(controle: str, rs: str, tekst: str, aantal: int = 1) -> dict:
+    return melding(controle, rs, tekst, ERNST_PER_CONTROLE[controle], aantal)
 
 
 def _inlezen(frames: dict[str, pl.DataFrame]) -> list[dict]:
@@ -123,7 +132,7 @@ def _bestandsnaam(vlp: pl.DataFrame, info: Bestandsinfo) -> list[dict]:
     if brin != info.brin:
         uitkomst.append(
             _melding(
-                "Bestandsnaam",
+                "BRIN",
                 VOORLOOP,
                 f"BRIN in bestandsnaam ({info.brin}) wijkt af van VLP ({brin})",
             )
@@ -133,7 +142,7 @@ def _bestandsnaam(vlp: pl.DataFrame, info: Bestandsinfo) -> list[dict]:
         if jaar != info.bekostigingsjaar:
             uitkomst.append(
                 _melding(
-                    "Bestandsnaam",
+                    "Bekostigingsjaar",
                     VOORLOOP,
                     f"Jaar in bestandsnaam ({info.bekostigingsjaar}) "
                     f"wijkt af van VLP ({jaar})",
@@ -155,7 +164,7 @@ def valideer(
         info:        Gegevens uit de bestandsnaam.
 
     Returns:
-        DataFrame met kolommen ``VALIDATIE_SCHEMA``; leeg als alles klopt.
+        DataFrame met kolommen ``MELDING_SCHEMA`` (kwaliteit.py); leeg als alles klopt.
 
     Raises:
         ValueError: Als het voorlooprecord (VLP) ontbreekt.
@@ -171,4 +180,4 @@ def valideer(
         + _codelijsten(frames, schema)
         + _bestandsnaam(frames[VOORLOOP], info)
     )
-    return pl.DataFrame(rijen, schema=VALIDATIE_SCHEMA)
+    return meldingen_frame(rijen)

@@ -2,6 +2,7 @@
 
 import pytest
 
+from ho_bekostiging_bestanden.kwaliteit import STATUS_OK
 from ho_bekostiging_bestanden.pipeline import DATAMODEL_MAP, verwerk_alles
 from ho_bekostiging_bestanden.star import STAR_TABELLEN
 
@@ -42,7 +43,8 @@ def test_scenario_levert_volledig_star_schema(tmp_path, soorten):
     assert resultaat.star["dim_levering"].height == len(soorten)
     geschreven = {p.stem for p in (tmp_path / "out" / DATAMODEL_MAP).glob("*.parquet")}
     assert geschreven == set(STAR_TABELLEN)
-    assert all(rapport.height == 0 for rapport in resultaat.validatie.values())
+    assert resultaat.status == STATUS_OK
+    assert resultaat.meldingen.is_empty()
 
 
 def test_fout_bestand_stopt_de_rest_niet(tmp_path):
@@ -50,7 +52,7 @@ def test_fout_bestand_stopt_de_rest_niet(tmp_path):
     schrijf_bestand(
         raw, "DEFBEK_2025_20240715_99XX.csv", analyse_regels()[1:]
     )  # geen VLP
-    (raw / "notities.txt").write_text("genegeerd")
+    (raw / "notities.txt").write_text("genegeerd", encoding="utf-8")
     resultaat = verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
     assert list(resultaat.fouten) == ["DEFBEK_2025_20240715_99XX.csv"]
     assert "VLP" in resultaat.fouten["DEFBEK_2025_20240715_99XX.csv"]

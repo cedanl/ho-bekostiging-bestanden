@@ -5,3 +5,9 @@
 raw = "data/01-raw/demo"
 prepared = "data/02-prepared/demo"
 output = "data/03-output/demo"
+
+[security]
+# Openbare demo-sleutel, alleen voor de synthetische demo-data. NIET voor echte
+# data: zet dan EENCIJFERHO_ENCRYPT_KEY (dezelfde sleutel als in 1cijferho); die
+# gaat altijd voor deze demo-sleutel.
+demo_sleutel = "ceda-demo-sleutel-alleen-voor-synthetische-demo-data-niet-voor-echte-data"

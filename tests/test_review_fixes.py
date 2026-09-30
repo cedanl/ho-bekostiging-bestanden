@@ -57,7 +57,9 @@ def test_opnieuw_verwerken_laat_geen_oude_tabellen_achter(tmp_path):
     naam = "VLPBEK_2025_20240115_99XX.csv"
     run_pipeline(schrijf_bestand(tmp_path / "a", naam, analyse_regels()), doel)
     zonder_brr = [r for r in analyse_regels() if not r.startswith("BRR")]
-    run_pipeline(schrijf_bestand(tmp_path / "b", naam, zonder_brr), doel)
+    # De SLR telt nog 1 BRR (error); het gaat hier om achtergebleven tabellen.
+    bestand = schrijf_bestand(tmp_path / "b", naam, zonder_brr)
+    run_pipeline(bestand, doel, fail_on_errors=False)
     assert not (doel / "BRR.parquet").exists()
 
 

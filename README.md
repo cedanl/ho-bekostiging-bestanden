@@ -50,6 +50,40 @@ De app gebruikt de Npuls-huisstijl uit de skill `vormgever-npuls-huisstijl` in
 `app/_huisstijl.py`, en het Streamlit-thema in `.streamlit/config.toml` wordt in de
 tests tegen de tokens gecontroleerd.
 
+## Pseudonimisering en koppelen met 1CHO
+
+Het BSN en het onderwijsnummer worden direct na het inlezen gepseudonimiseerd, met
+precies hetzelfde algoritme als [1cijferho](https://github.com/cedanl/1cijferho)
+(`pseudonymize_value`: HMAC-SHA256 met de sleutel uit `EENCIJFERHO_ENCRYPT_KEY`,
+minimaal 64 bytes). In de prepared- en star-tabellen staat daardoor geen leesbaar
+BSN meer.
+
+Gebruik je in beide tools **dezelfde sleutel**, dan geeft een student in beide
+hetzelfde pseudoniem. Je koppelt dan het gepseudonimiseerde 1CHO-bestand aan
+`dim_persoon` op de kolom `Burgerservicenummer`, en via `_persoon_id` door naar de
+feittabellen:
+
+```python
+import polars as pl
+
+ev = pl.read_csv("EV…csv", separator=";", infer_schema_length=0)  # na 1cijferho
+persoon = pl.read_parquet("data/03-output/…/datamodel/dim_persoon.parquet")
+gekoppeld = ev.join(persoon, on="Burgerservicenummer", how="inner")
+```
+
+- Pseudonimisering staat **standaard aan**. Zonder sleutel verwerkt de CLI dan niets
+  (`ho verwerk … --sleutelbestand <pad>` kan ook).
+- Uitzetten kan expliciet: `ho verwerk … --geen-pseudonimisering`, of het vinkje op
+  Home uitzetten. BSN en onderwijsnummer blijven dan leesbaar; koppelen met
+  gepseudonimiseerde 1CHO-data kan dan niet. De keuze staat per levering in
+  `dim_levering.Gepseudonimiseerd`, en het star schema weigert een mix van beide.
+- De demo-app gebruikt een openbare demo-sleutel uit `app/config.toml` en waarschuwt
+  daarvoor. Zet voor echte data altijd `EENCIJFERHO_ENCRYPT_KEY`; die gaat voor.
+- Het BSN wordt gepseudonimiseerd zoals het in het bestand staat (9 tekens, met
+  voorloopnul), net als in 1cijferho.
+- Iemand zonder BSN (alleen een onderwijsnummer) koppelt alleen als 1CHO
+  hetzelfde onderwijsnummer heeft (kolom `Onderwijsnummer`).
+
 ## Eigen data
 
 Zet je bestanden in een eigen map (bijvoorbeeld `data/01-raw/eigen/`; alles buiten
@@ -88,11 +122,31 @@ In Windows PowerShell werkt `*` niet als argument; geef de mappen dan zo mee:
 uv run ho star (Get-ChildItem data/02-prepared/demo -Directory).FullName --output data/03-output/demo
 ```
 
+### Kwaliteit en exitcodes
+
+Elke controle levert een melding met een ernst: `error` of `warning`. Eén
+error zet de status op `fail`. De uitvoer wordt altijd geschreven, zodat je
+de oorzaak kunt nalezen: per levering in de tabel `VALIDATIE`, en voor het
+geheel in `<output>/quality.json`. Dat bestand bevat de status, alle
+meldingen per levering en voor het star schema, de sha256 van elk
+bronbestand, het aantal rijen per levering × recordsoort en de pakketversie
+(schema: `src/ho_bekostiging_bestanden/metadata/quality.schema.json`).
+
+| Exitcode | Betekenis |
+|---|---|
+| 0 | Klaar; status `ok` of `warn` |
+| 1 | Invoerfout (onbekend bestand, geen VLP, geen sleutel) |
+| 3 | Kwaliteitsstatus `fail` |
+
+Met `--allow-quality-errors` (bij `verwerk` en `star`) geeft een `fail`
+exitcode 0 en een regel "Let op: kwaliteitsstatus fail". De app toont de
+status op Home en als banner op Dashboard en Resultaten.
+
 ## Datamodel
 
 | Tabel | Eén rij per |
 |---|---|
-| `dim_levering` | verwerkt bestand |
+| `dim_levering` | verwerkt bestand (met `Sha256` van het bronbestand) |
 | `dim_persoon` | student (`_persoon_id` = BSN, anders onderwijsnummer) |
 | `dim_instelling` | BRIN (`EigenInstelling` = ontvanger van het bestand) |
 | `dim_opleiding` | opleidingscode |

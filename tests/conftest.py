@@ -11,8 +11,11 @@ import pytest
 
 from ho_bekostiging_bestanden.demo import maak_regel, schrijf_bestand
 from ho_bekostiging_bestanden.pipeline import verwerk_alles
+from ho_bekostiging_bestanden.pseudonimisering import laad_sleutel
 
 DEMO_RAW = Path(__file__).parents[1] / "data" / "01-raw" / "demo"
+# Vaste testsleutel (>= 64 bytes); alleen voor tests. Zie test_pseudonimisering.py.
+TEST_SLEUTEL = "ceda-testsleutel-alleen-voor-tests-" + "x" * 40
 
 __all__ = [
     "DEMO_RAW",
@@ -195,4 +198,12 @@ def hisbek_bestand(tmp_path: Path) -> Path:
 def demo_star(tmp_path_factory) -> dict:
     """Star schema van de demo-data (één keer per testsessie gebouwd)."""
     basis = tmp_path_factory.mktemp("demo")
-    return verwerk_alles(DEMO_RAW, basis / "prep", basis / "out").star
+    # Session-fixture draait vóór de per-test env-var: sleutel expliciet meegeven.
+    sleutel = laad_sleutel(TEST_SLEUTEL)
+    return verwerk_alles(DEMO_RAW, basis / "prep", basis / "out", sleutel=sleutel).star
+
+
+@pytest.fixture(autouse=True)
+def pseudonimiseringssleutel(monkeypatch):
+    """Elke test draait met de vaste testsleutel in EENCIJFERHO_ENCRYPT_KEY."""
+    monkeypatch.setenv("EENCIJFERHO_ENCRYPT_KEY", TEST_SLEUTEL)

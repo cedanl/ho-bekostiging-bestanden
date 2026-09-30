@@ -1,5 +1,6 @@
 """Orkestratie van de ingestion-pipeline: ingest > decode > validate > export."""
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import get_args
 
 import polars as pl
 
+from ho_bekostiging_bestanden import contracten
 from ho_bekostiging_bestanden.decode import decode_frames
 from ho_bekostiging_bestanden.export import OutputFormat, export_frames
 from ho_bekostiging_bestanden.ingest import (
@@ -19,8 +21,32 @@ from ho_bekostiging_bestanden.ingest import (
     parse_bestandsnaam,
     read_multi_record_csv,
 )
+from ho_bekostiging_bestanden.kwaliteit import (
+    BRON_KOLOM,
+    ERNST_ERROR,
+    ERNST_KOLOM,
+    ERNST_WARNING,
+    MELDING_SCHEMA,
+    QUALITY_JSON,
+    RAPPORT_SCHEMA,
+    SHA256_KOLOM,
+    STAR_BRON,
+    STATUS_OK,
+    bouw_rapport,
+    dekking,
+    melding,
+    meldingen_frame,
+    met_bron,
+    poort,
+    schrijf_rapport,
+    status,
+)
 from ho_bekostiging_bestanden.metadata import schema_meta
-from ho_bekostiging_bestanden.stack import stack_prepared
+from ho_bekostiging_bestanden.pseudonimisering import (
+    laad_sleutel,
+    pseudonimiseer_frames,
+)
+from ho_bekostiging_bestanden.stack import LABEL_COL, stack_prepared
 from ho_bekostiging_bestanden.star import build_star
 from ho_bekostiging_bestanden.validate import VOORLOOP, valideer
 
@@ -41,6 +67,19 @@ DATAMODEL_MAP = "datamodel"
 DUBBEL_MELDING = (
     "Dubbel: een bestand met dezelfde naam ({eerste}) is al verwerkt; overgeslagen."
 )
+# Bestanden die niet in een prepared-map terechtkomen. Een onverwerkbaar
+# bestand ontbreekt in de cijfers (error); een dubbel bestand is bewust één
+# keer geteld (warning).
+CONTROLE_BESTAND = "Bestand"
+CONTROLE_DUBBEL = "Dubbel"
+ERNST_PER_BESTANDSCONTROLE = {
+    CONTROLE_BESTAND: ERNST_ERROR,
+    CONTROLE_DUBBEL: ERNST_WARNING,
+}
+VEROUDERD_MELDING = (
+    "Prepared-map zonder ernst per melding (van vóór de kwaliteitspoort); "
+    "verwerk het bestand opnieuw."
+)
 
 
 def detect_levering(path: str | Path) -> str | None:
@@ -50,7 +89,11 @@ def detect_levering(path: str | Path) -> str | None:
 
 
 def _levering_tabel(
-    info: Bestandsinfo, vlp: pl.DataFrame, schema_name: str
+    info: Bestandsinfo,
+    vlp: pl.DataFrame,
+    schema_name: str,
+    gepseudonimiseerd: bool,
+    sha256: str,
 ) -> pl.DataFrame:
     return pl.DataFrame(
         {
@@ -59,7 +102,9 @@ def _levering_tabel(
             "DatumAanmaak": [vlp["DatumAanmaak"][0]],
             "BrinOntvanger": [vlp["BRIN"][0]],
             "Bestandsnaam": [info.bestandsnaam],
+            SHA256_KOLOM: [sha256],
             "SchemaVersie": [str(schema_meta(schema_name)["schema_version"])],
+            "Gepseudonimiseerd": [gepseudonimiseerd],
         },
         schema={
             "SoortLevering": pl.Utf8,
@@ -67,7 +112,9 @@ def _levering_tabel(
             "DatumAanmaak": pl.Date,
             "BrinOntvanger": pl.Utf8,
             "Bestandsnaam": pl.Utf8,
+            SHA256_KOLOM: pl.Utf8,
             "SchemaVersie": pl.Utf8,
+            "Gepseudonimiseerd": pl.Boolean,
         },
     )
 
@@ -84,6 +131,9 @@ def run_pipeline(
     source: str | Path,
     target: str | Path,
     fmt: OutputFormat = "parquet",
+    sleutel: bytes | None = None,
+    pseudonimiseer: bool = True,
+    fail_on_errors: bool = True,
 ) -> dict[str, pl.DataFrame]:
     """Verwerk één ruw analysebestand of HISBEK-bestand naar ``target``.
 
@@ -91,14 +141,27 @@ def run_pipeline(
         source: Pad naar het ruwe bestand (``VLPBEK_…``, ``DEFBEK_…``, ``HISBEK_…``).
         target: Doelmap voor de prepared-tabellen.
         fmt:    ``"parquet"`` (standaard) of ``"csv"``.
+        sleutel: Pseudonimiseringssleutel; standaard uit ``EENCIJFERHO_ENCRYPT_KEY``.
+                 BSN en onderwijsnummer worden direct na het decoderen
+                 gepseudonimiseerd, gelijk aan 1cijferho.
+        pseudonimiseer: Standaard ``True``. Met ``False`` blijven BSN en
+                 onderwijsnummer leesbaar en is geen sleutel nodig; de tabel
+                 ``LEVERING`` legt vast welke keuze is gemaakt.
+        fail_on_errors: Werp :class:`KwaliteitsFout` na het wegschrijven als
+                 de levering status ``fail`` heeft.
 
     Returns:
         Dict van tabelnaam naar DataFrame: de recordsoorten plus ``LEVERING``
         en ``VALIDATIE``.
 
     Raises:
-        ValueError: Als de bestandsnaam niet herkend wordt of de VLP ontbreekt.
+        ValueError: Als de bestandsnaam niet herkend wordt, de VLP ontbreekt of
+                    er geen (geldige) pseudonimiseringssleutel is.
+        KwaliteitsFout: Bij status ``fail`` en ``fail_on_errors``; de
+                    prepared-uitvoer staat dan al op schijf.
     """
+    if pseudonimiseer and sleutel is None:
+        sleutel = laad_sleutel()
     info = parse_bestandsnaam(source)
     if info is None:
         raise ValueError(
@@ -108,30 +171,106 @@ def run_pipeline(
         )
     schema_name = SCHEMA_PER_LEVERING[info.soort]
     frames = decode_frames(read_multi_record_csv(source, schema_name), schema_name)
+    if pseudonimiseer and sleutel is not None:
+        frames = pseudonimiseer_frames(frames, sleutel)
     rapport = valideer(frames, schema_name, info)
     uitvoer = {rs: df for rs, df in frames.items() if rs != MELDINGEN}
-    uitvoer[LEVERING] = _levering_tabel(info, frames[VOORLOOP], schema_name)
+    uitvoer[LEVERING] = _levering_tabel(
+        info,
+        frames[VOORLOOP],
+        schema_name,
+        pseudonimiseer,
+        hashlib.sha256(Path(source).read_bytes()).hexdigest(),
+    )
     uitvoer[VALIDATIE] = rapport
     _maak_leeg(Path(target))
     export_frames(uitvoer, target, fmt=fmt)
+    if fail_on_errors:
+        poort(
+            met_bron(rapport, Path(source).stem),
+            f"zie de tabel {VALIDATIE} in {target}",
+        )
     return uitvoer
+
+
+def _leveringmeldingen(
+    sources: Sequence[Path | str], stacked: dict[str, pl.DataFrame]
+) -> pl.DataFrame:
+    """Validatiemeldingen per levering, plus een error per verouderde map."""
+    delen = [pl.DataFrame(schema=RAPPORT_SCHEMA)]
+    validatie = stacked.get(VALIDATIE)
+    if validatie is not None and ERNST_KOLOM in validatie.columns:
+        # Rijen zonder ernst komen uit een verouderde map; die krijgt hieronder
+        # één eigen error.
+        delen.append(
+            validatie.filter(pl.col(ERNST_KOLOM).is_not_null()).select(
+                pl.col(LABEL_COL).alias(BRON_KOLOM), *MELDING_SCHEMA
+            )
+        )
+    for map_ in map(Path, sources):
+        pad = map_ / f"{VALIDATIE}.parquet"
+        if not pad.exists() or ERNST_KOLOM not in pl.read_parquet_schema(pad):
+            verouderd = melding(
+                "Prepared-map", VALIDATIE, VEROUDERD_MELDING, ERNST_ERROR
+            )
+            delen.append(met_bron(meldingen_frame([verouderd]), map_.name))
+    return pl.concat(delen)
+
+
+def _star_meldingen(star: dict[str, pl.DataFrame]) -> pl.DataFrame:
+    """Meldingen van de star-contracten (``contracten.py``)."""
+    return met_bron(contracten.controleer_star(star), STAR_BRON)
+
+
+def _bouw_star(
+    sources: Sequence[Path | str],
+    target: str | Path,
+    fouten_toegestaan: bool,
+    bestandsmeldingen: pl.DataFrame | None = None,
+) -> tuple[dict[str, pl.DataFrame], pl.DataFrame]:
+    """Bouw en schrijf star schema en ``quality.json``; geef star en meldingen.
+
+    ``bestandsmeldingen`` (``RAPPORT_SCHEMA``) zijn meldingen over bestanden
+    die niet in de prepared-mappen terechtkwamen (zie :func:`verwerk_alles`).
+    """
+    stacked = stack_prepared(sources)
+    star = build_star(stacked)
+    delen = [_leveringmeldingen(sources, stacked), _star_meldingen(star)]
+    if bestandsmeldingen is not None:
+        delen.append(bestandsmeldingen)
+    meldingen = pl.concat(delen)
+    export_frames(star, Path(target) / DATAMODEL_MAP)
+    dim_levering = star["dim_levering"]
+    rapport = bouw_rapport(
+        meldingen, dim_levering, fouten_toegestaan, dekking(stacked, dim_levering)
+    )
+    schrijf_rapport(rapport, Path(target))
+    return star, meldingen
 
 
 def run_star(
     sources: Sequence[Path | str],
     target: str | Path,
+    fail_on_errors: bool = True,
 ) -> dict[str, pl.DataFrame]:
     """Stapel prepared-mappen, bouw het star schema en schrijf het weg.
 
     Args:
         sources: Mappen met prepared Parquet-bestanden (één per levering).
-        target:  Doelmap; het star schema komt in ``<target>/datamodel/``.
+        target:  Doelmap; het star schema komt in ``<target>/datamodel/`` en
+                 het kwaliteitsrapport in ``<target>/quality.json``.
+        fail_on_errors: Werp :class:`KwaliteitsFout` bij status ``fail``.
 
     Returns:
         Dict met de star-schema-tabellen.
+
+    Raises:
+        KwaliteitsFout: Bij status ``fail`` en ``fail_on_errors``; star schema en
+                        ``quality.json`` staan dan al op schijf.
     """
-    star = build_star(stack_prepared(sources))
-    export_frames(star, Path(target) / DATAMODEL_MAP)
+    star, meldingen = _bouw_star(sources, target, not fail_on_errors)
+    if fail_on_errors:
+        poort(meldingen, f"zie {Path(target) / QUALITY_JSON}")
     return star
 
 
@@ -141,8 +280,11 @@ class Verwerking:
 
     prepared_dirs: list[Path] = field(default_factory=list)
     star: dict[str, pl.DataFrame] = field(default_factory=dict)
-    validatie: dict[str, pl.DataFrame] = field(default_factory=dict)
     fouten: dict[str, str] = field(default_factory=dict)
+    status: str = STATUS_OK
+    meldingen: pl.DataFrame = field(
+        default_factory=lambda: pl.DataFrame(schema=RAPPORT_SCHEMA)
+    )
 
 
 def vind_bestanden(raw: Path) -> list[Path]:
@@ -166,39 +308,78 @@ def onherkende_bestanden(raw: Path) -> list[Path]:
     ]
 
 
-def verwerk_alles(raw: Path, prepared: Path, output: Path) -> Verwerking:
+def verwerk_alles(
+    raw: Path,
+    prepared: Path,
+    output: Path,
+    sleutel: bytes | None = None,
+    pseudonimiseer: bool = True,
+) -> Verwerking:
     """Verwerk alle herkende bestanden in ``raw`` en bouw het star schema.
 
     Een bestand dat niet verwerkt kan worden (bijv. zonder VLP) of dat dubbel
     voorkomt, komt in ``fouten``; de overige bestanden gaan gewoon door.
+    Gooit geen :class:`KwaliteitsFout`: ``status`` en ``meldingen`` geven de
+    kwaliteit, zodat de meldingen per bestand niet verloren gaan.
 
     Args:
         raw:      Map met ruwe bestanden.
         prepared: Map voor de prepared-tabellen (één submap per bestand).
         output:   Map voor het star schema.
+        sleutel:  Pseudonimiseringssleutel; standaard uit ``EENCIJFERHO_ENCRYPT_KEY``.
+        pseudonimiseer: Standaard ``True``; met ``False`` is geen sleutel nodig.
 
     Returns:
-        :class:`Verwerking` met prepared-mappen, star schema, validatie en fouten.
+        :class:`Verwerking` met prepared-mappen, star schema, fouten, status en
+        meldingen.
     """
+    # Eén keer laden: zonder geldige sleutel wordt niets verwerkt (ValueError).
+    if pseudonimiseer and sleutel is None:
+        sleutel = laad_sleutel()
     resultaat = Verwerking()
     gezien: dict[str, Path] = {}
+    bestandsmeldingen: list[pl.DataFrame] = []
+
+    def meld(bestand: Path, controle: str, tekst: str) -> None:
+        rij = melding(
+            controle,
+            detect_levering(bestand) or "",
+            tekst,
+            ERNST_PER_BESTANDSCONTROLE[controle],
+        )
+        bestandsmeldingen.append(met_bron(meldingen_frame([rij]), bestand.stem))
+
     for bestand in vind_bestanden(raw):
-        sleutel = bestand.stem.upper()
-        if sleutel in gezien:
+        stam = bestand.stem.upper()
+        if stam in gezien:
             # Zelfde levering twee keer (bijv. ook geüpload): één keer tellen.
-            eerste = gezien[sleutel].relative_to(raw)
-            resultaat.fouten[str(bestand.relative_to(raw))] = DUBBEL_MELDING.format(
-                eerste=eerste
-            )
+            eerste = gezien[stam].relative_to(raw)
+            tekst = DUBBEL_MELDING.format(eerste=eerste)
+            resultaat.fouten[str(bestand.relative_to(raw))] = tekst
+            meld(bestand, CONTROLE_DUBBEL, tekst)
             continue
-        gezien[sleutel] = bestand
+        gezien[stam] = bestand
         doel = Path(prepared) / bestand.stem
         try:
-            frames = run_pipeline(bestand, doel)
+            run_pipeline(
+                bestand,
+                doel,
+                sleutel=sleutel,
+                pseudonimiseer=pseudonimiseer,
+                fail_on_errors=False,
+            )
         except ValueError as fout:
             resultaat.fouten[bestand.name] = str(fout)
+            meld(bestand, CONTROLE_BESTAND, str(fout))
             continue
         resultaat.prepared_dirs.append(doel)
-        resultaat.validatie[bestand.name] = frames[VALIDATIE]
-    resultaat.star = run_star(resultaat.prepared_dirs, output)
+    resultaat.star, resultaat.meldingen = _bouw_star(
+        resultaat.prepared_dirs,
+        output,
+        fouten_toegestaan=False,
+        bestandsmeldingen=pl.concat(
+            [pl.DataFrame(schema=RAPPORT_SCHEMA), *bestandsmeldingen]
+        ),
+    )
+    resultaat.status = status(resultaat.meldingen)
     return resultaat

@@ -13,6 +13,7 @@ import polars as pl
 
 from ho_bekostiging_bestanden.decode import STATUS_SCHEIDING, STATUS_VELD
 from ho_bekostiging_bestanden.ingest import LEVERING, SCHEMA_PER_LEVERING
+from ho_bekostiging_bestanden.kwaliteit import SHA256_KOLOM
 from ho_bekostiging_bestanden.metadata import load_codelijst, load_schema
 from ho_bekostiging_bestanden.stack import LABEL_COL
 
@@ -42,6 +43,8 @@ DIM_LEVERING_SCHEMA = {
     "DatumAanmaak": pl.Date,
     "BrinOntvanger": pl.Utf8,
     "Bestandsnaam": pl.Utf8,
+    SHA256_KOLOM: pl.Utf8,
+    "Gepseudonimiseerd": pl.Boolean,
 }
 
 STAR_TABELLEN = (
@@ -113,12 +116,19 @@ def _nieuwste_eerst(
 def _dim_levering(stacked: dict[str, pl.DataFrame]) -> pl.DataFrame:
     delen = [pl.DataFrame(schema=DIM_LEVERING_SCHEMA)]
     if LEVERING in stacked:
-        delen.append(stacked[LEVERING].select(list(DIM_LEVERING_SCHEMA)))
-    return (
-        pl.concat(delen, how="vertical_relaxed")
-        .unique(LABEL_COL, keep="first", maintain_order=True)
-        .sort(LABEL_COL)
-    )
+        levering = stacked[LEVERING]
+        # Oudere prepared-mappen kennen niet alle kolommen (bijv. Gepseudonimiseerd).
+        ontbrekend = [
+            pl.lit(None, dtype=dtype).alias(kolom)
+            for kolom, dtype in DIM_LEVERING_SCHEMA.items()
+            if kolom not in levering.columns
+        ]
+        delen.append(
+            levering.with_columns(ontbrekend).select(list(DIM_LEVERING_SCHEMA))
+        )
+    # Niet ontdubbelen: stack_prepared weigert dubbele labels, en het
+    # grain-contract in contracten.py bewaakt één rij per levering.
+    return pl.concat(delen, how="vertical_relaxed").sort(LABEL_COL)
 
 
 def _feiten(
@@ -248,6 +258,20 @@ def _dim_status(fact_status: pl.DataFrame) -> pl.DataFrame:
     return pl.concat([codelijst, onbekend.select(codelijst.columns)]).sort("Code")
 
 
+def _controleer_pseudonimisering(dim_levering: pl.DataFrame) -> None:
+    """Weiger een mix van gepseudonimiseerde en leesbare leveringen.
+
+    Een pseudoniem en een leesbaar BSN van dezelfde student koppelen niet; een
+    gemengd star schema zou studenten stil dubbel tellen.
+    """
+    keuzes = dim_levering["Gepseudonimiseerd"].drop_nulls().unique()
+    if keuzes.len() > 1:
+        raise ValueError(
+            "De leveringen zijn deels wel en deels niet gepseudonimiseerd. "
+            "Verwerk ze allemaal met dezelfde keuze voor pseudonimisering."
+        )
+
+
 def build_star(stacked: dict[str, pl.DataFrame]) -> dict[str, pl.DataFrame]:
     """Bouw het star schema uit de uitvoer van :func:`stack_prepared`.
 
@@ -257,8 +281,12 @@ def build_star(stacked: dict[str, pl.DataFrame]) -> dict[str, pl.DataFrame]:
     Returns:
         Dict met de tabellen uit ``STAR_TABELLEN``, in die volgorde. Tabellen
         waarvoor geen bron is, zijn leeg maar hebben hun vaste kolommen.
+
+    Raises:
+        ValueError: Als gepseudonimiseerde en leesbare leveringen gemengd zijn.
     """
     dim_levering = _dim_levering(stacked)
+    _controleer_pseudonimisering(dim_levering)
     deelname = _feiten(stacked, DEELNAME_BRONNEN, "D", dim_levering)
     resultaat = _feiten(stacked, RESULTAAT_BRONNEN, "R", dim_levering)
     status = _fact_status(deelname, resultaat)
