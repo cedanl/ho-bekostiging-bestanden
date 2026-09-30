@@ -11,6 +11,12 @@ from _huisstijl import hero
 from _utils import output_dir, prepared_dir, pseudonimiseringssleutel, raw_dir
 
 from ho_bekostiging_bestanden.ingest import parse_bestandsnaam
+from ho_bekostiging_bestanden.kwaliteit import (
+    ERNST_ERROR,
+    ERNST_KOLOM,
+    ERNST_WARNING,
+    STATUS_FAIL,
+)
 from ho_bekostiging_bestanden.pipeline import (
     detect_levering,
     onherkende_bestanden,
@@ -126,15 +132,27 @@ if st.button(
         )
     for naam, fout in resultaat.fouten.items():
         st.error(f"**{naam}** kon niet worden verwerkt: {fout}")
-    for naam, rapport in resultaat.validatie.items():
-        if not rapport.is_empty():
-            with st.expander(f"⚠️ {naam}: {rapport.height} controle(s) met meldingen"):
-                st.dataframe(rapport, hide_index=True, width="stretch")
-    totaal = sum(df.height for df in resultaat.star.values())
-    st.success(
-        f"{len(resultaat.prepared_dirs)} bestand(en) verwerkt; star schema met "
-        f"{len(resultaat.star)} tabellen en {totaal:,} rijen."
-    )
+    meldingen = resultaat.meldingen
+    fouten = meldingen.filter(pl.col(ERNST_KOLOM) == ERNST_ERROR)
+    waarschuwingen = meldingen.filter(pl.col(ERNST_KOLOM) == ERNST_WARNING)
+    if resultaat.status == STATUS_FAIL:
+        st.error(
+            f"Kwaliteitsstatus fail: {fouten.height} error(s). Het star schema is "
+            "geschreven, maar de cijfers zijn niet betrouwbaar. Los de errors "
+            "hieronder op en verwerk opnieuw."
+        )
+        st.dataframe(fouten.drop(ERNST_KOLOM), hide_index=True, width="stretch")
+    if not waarschuwingen.is_empty():
+        with st.expander(f"⚠️ {waarschuwingen.height} waarschuwing(en)"):
+            st.dataframe(
+                waarschuwingen.drop(ERNST_KOLOM), hide_index=True, width="stretch"
+            )
+    if resultaat.status != STATUS_FAIL:
+        totaal = sum(df.height for df in resultaat.star.values())
+        st.success(
+            f"{len(resultaat.prepared_dirs)} bestand(en) verwerkt; star schema met "
+            f"{len(resultaat.star)} tabellen en {totaal:,} rijen."
+        )
 
 col_dash, col_res = st.columns(2)
 with col_dash:

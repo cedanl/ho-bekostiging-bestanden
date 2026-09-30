@@ -6,7 +6,7 @@ from streamlit.testing.v1 import AppTest
 
 from ho_bekostiging_bestanden.star import STAR_TABELLEN
 
-from .conftest import DEMO_RAW
+from .conftest import DEMO_RAW, analyse_regels, schrijf_bestand
 
 APP = Path(__file__).parents[1] / "app"
 sys.path.insert(0, str(APP))
@@ -114,3 +114,24 @@ def test_home_pseudonimisering_uit_zonder_sleutel(tmp_path, monkeypatch):
     at.button(key="verwerk_alles").click().run()
     assert not at.exception
     assert (tmp_path / "out" / "datamodel" / "dim_persoon.parquet").exists()
+
+
+def test_home_toont_errors_bij_fail(tmp_path, monkeypatch):
+    raw = tmp_path / "raw"
+    regels = analyse_regels()
+    regels.insert(1, "XYZ|x")  # onbekende recordsoort → error
+    schrijf_bestand(raw, "VLPBEK_2025_20240115_99XX.csv", regels)
+    config = tmp_path / "config.toml"
+    config.write_text(
+        "[data]\n"
+        f'raw = "{raw.as_posix()}"\n'
+        f'prepared = "{(tmp_path / "prep").as_posix()}"\n'
+        f'output = "{(tmp_path / "out").as_posix()}"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(CONFIG_ENV, str(config))
+    at = _pagina("home").run()
+    at.button(key="verwerk_alles").click().run()
+    assert not at.exception
+    assert any("Kwaliteitsstatus fail" in e.value for e in at.error)
+    assert not at.success

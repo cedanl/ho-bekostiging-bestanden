@@ -1,6 +1,7 @@
 import polars as pl
 
 from ho_bekostiging_bestanden.demo import genereer_demo
+from ho_bekostiging_bestanden.kwaliteit import STATUS_OK
 from ho_bekostiging_bestanden.pipeline import verwerk_alles
 
 from .conftest import DEMO_RAW
@@ -29,8 +30,8 @@ def test_demo_in_git_is_actueel(tmp_path):
 def test_demo_verwerkt_zonder_fouten_of_meldingen(tmp_path):
     resultaat = verwerk_alles(DEMO_RAW, tmp_path / "prep", tmp_path / "out")
     assert resultaat.fouten == {}
-    for naam, rapport in resultaat.validatie.items():
-        assert rapport.height == 0, (naam, rapport.to_dicts())
+    assert resultaat.status == STATUS_OK
+    assert resultaat.meldingen.is_empty(), resultaat.meldingen.to_dicts()
 
 
 def test_demo_is_gevarieerd(demo_star):

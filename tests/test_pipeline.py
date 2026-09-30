@@ -1,14 +1,26 @@
+import json
 from datetime import date
 
 import polars as pl
 import pytest
 
+from ho_bekostiging_bestanden.kwaliteit import (
+    QUALITY_JSON,
+    STATUS_FAIL,
+    STATUS_OK,
+    STATUS_WARN,
+    KwaliteitsFout,
+)
 from ho_bekostiging_bestanden.pipeline import (
     LEVERING,
     VALIDATIE,
     detect_levering,
     run_pipeline,
+    run_star,
+    verwerk_alles,
 )
+
+from .conftest import analyse_regels, schrijf_bestand
 
 
 def test_detect_levering():
@@ -51,3 +63,75 @@ def test_onbekend_bestand(tmp_path):
     pad.write_text("VLP|x", encoding="utf-8")
     with pytest.raises(ValueError, match="Onbekend bestandstype"):
         run_pipeline(pad, tmp_path / "prep")
+
+
+def _fout_bestand(map_):
+    regels = analyse_regels()
+    regels.insert(1, "XYZ|x")  # onbekende recordsoort → error
+    return schrijf_bestand(map_, "VLPBEK_2025_20240115_99XX.csv", regels)
+
+
+def _rapport(uit):
+    return json.loads((uit / QUALITY_JSON).read_text(encoding="utf-8"))
+
+
+def test_run_pipeline_poort_na_wegschrijven(tmp_path):
+    doel = tmp_path / "prep"
+    with pytest.raises(KwaliteitsFout, match="1 error"):
+        run_pipeline(_fout_bestand(tmp_path / "raw"), doel)
+    validatie = pl.read_parquet(doel / f"{VALIDATIE}.parquet")
+    assert validatie["Ernst"].to_list() == ["error"]
+
+
+def test_run_pipeline_fouten_toegestaan(tmp_path):
+    frames = run_pipeline(
+        _fout_bestand(tmp_path / "raw"), tmp_path / "prep", fail_on_errors=False
+    )
+    assert frames[VALIDATIE].height == 1
+
+
+def test_run_star_schrijft_quality_json_en_gooit(tmp_path):
+    prep = tmp_path / "prep" / "lev"
+    run_pipeline(_fout_bestand(tmp_path / "raw"), prep, fail_on_errors=False)
+    uit = tmp_path / "out"
+    with pytest.raises(KwaliteitsFout):
+        run_star([prep], uit)
+    assert (uit / "datamodel" / "fact_deelname.parquet").exists()
+    rapport = _rapport(uit)
+    assert rapport["status"] == STATUS_FAIL
+    assert rapport["fouten_toegestaan"] is False
+    assert rapport["leveringen"][0]["levering"] == "lev"
+
+
+def test_verouderde_prepared_map_is_fail(tmp_path, vlpbek_bestand):
+    prep = tmp_path / "prep" / "oud"
+    run_pipeline(vlpbek_bestand, prep)
+    pad = prep / f"{VALIDATIE}.parquet"
+    pl.read_parquet(pad).drop("Ernst").write_parquet(pad)
+    run_star([prep], tmp_path / "out", fail_on_errors=False)
+    rapport = _rapport(tmp_path / "out")
+    assert rapport["status"] == STATUS_FAIL
+    assert "verwerk" in rapport["leveringen"][0]["meldingen"][0]["melding"]
+
+
+def test_verwerk_alles_gooit_niet_maar_meldt(tmp_path):
+    raw = tmp_path / "raw"
+    _fout_bestand(raw)
+    resultaat = verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
+    assert resultaat.status == STATUS_FAIL
+    assert resultaat.meldingen["Bron"].to_list() == ["VLPBEK_2025_20240115_99XX"]
+
+
+def test_verwerk_alles_lege_map_is_ok(tmp_path):
+    (tmp_path / "raw").mkdir()
+    resultaat = verwerk_alles(tmp_path / "raw", tmp_path / "prep", tmp_path / "out")
+    assert resultaat.status == STATUS_OK
+    assert _rapport(tmp_path / "out")["leveringen"] == []
+
+
+def test_alleen_warnings_is_warn(tmp_path):
+    raw = tmp_path / "raw"
+    # Jaar in de bestandsnaam wijkt af van de VLP → warning.
+    schrijf_bestand(raw, "VLPBEK_2024_20240115_99XX.csv", analyse_regels())
+    resultaat = verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
+    assert resultaat.status == STATUS_WARN
