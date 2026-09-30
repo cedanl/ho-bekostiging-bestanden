@@ -59,10 +59,13 @@ cohorten uit HISBEK, en een gedeelde MBO/HO-kernbibliotheek (zie §11).
   JJJJ het bekostigingsjaar (bij HISBEK: het laatste bekostigingsjaar),
   EEJJMMDD de aanmaakdatum en 99XX de BRIN van de ontvanger. **[Bevestigd]**
 - Datums als `jjjjmmdd`; booleans als `J`/`N`. **[Bevestigd]**
-- BLB bestaat in een oude en een nieuwe versie. De nieuwe versie heeft extra
-  velden (graaddatums AD/ADLG, verbruikstellers). **[Bevestigd]** De reader
-  herkent de versie aan het aantal velden. **[Te checken: of de oude versie
-  nog in omloop is]**
+- Alle regels in het bestand zijn opgevuld tot hetzelfde aantal velden (25 in
+  het voorbeeld), dus lege velden aan het eind zijn normaal. **[Bevestigd]**
+- BLB bestaat in een oude versie (tot september 2019, bestandsnaam `_OUD`) en
+  in de huidige versie met graaddatums AD/ADLG en verbruikstellers.
+  **[Bevestigd]** v1 ondersteunt alleen de **huidige** versie. Door het
+  opvullen is de versie niet aan het aantal velden te herkennen.
+  **[Te checken: of oude bestanden nog gebruikt worden]**
 - Een aantal van `-1` in BLB betekent "n.v.t." (eerdere graad). **[Bevestigd]**
 - `CodeBekostigingstatus` bevat één of meer codes van twee kleine letters,
   oplopend en gescheiden door komma's, bijvoorbeeld `na,ti`. **[Bevestigd]**
@@ -96,12 +99,13 @@ CLI-commando `ho`.
 | `metadata/*.csv` (overige codelijsten) | Opleidingsniveau, opleidingsfase, onderwijsvorm, inschrijvingsvorm, bekostigingsniveau, opleidingsonderdeel, bekostigingscode, IndicatieBaMa (waardelijsten uit de PvE) |
 | `metadata/__init__.py` | `load_schema(naam)`, `load_codelijst(naam)` |
 | `ingest.py` | Generieke multi-record-reader die splitst per recordsoort en regels afknipt of aanvult tot het schema. `parse_bestandsnaam()` geeft levering, jaar, aanmaakdatum en BRIN. |
-| `decode.py` | Typen omzetten: datums (ongeldig wordt `null` en de ruwe waarde blijft in `<Veld>_Ruw`), J/N naar boolean, getallen, `-1` naar `null` met een vlag `<Veld>_NVT`, `CodeBekostigingstatus` naar een lijst |
+| `decode.py` | Typen omzetten: datums (ongeldig wordt `null` en de ruwe waarde blijft in `<Veld>_Ruw`), J/N naar boolean, getallen, `-1` naar `null` met een vlag `<Veld>_NVT`, `CodeBekostigingstatus` blijft tekst (bijvoorbeeld `na,ti`), zodat CSV-export werkt; de brugtabel in het star schema splitst de codes |
 | `validate.py` | Controles die niets tegenhouden en een rapport opleveren: tellingen in SLR tegen het werkelijke aantal, verplichte velden, codes die niet in een codelijst staan, onbekende recordsoorten, BRIN in bestandsnaam tegen VLP |
 | `export.py` | Parquet (standaard) of CSV |
-| `pipeline.py` | `detect_levering()`, `run_pipeline(source, target)`, `run_auto_pipeline()`. Een onbekende bestandsnaam geeft een `ValueError`. |
+| `pipeline.py` | `detect_levering()`, `run_pipeline(source, target)`, `run_star()`. Een onbekende bestandsnaam geeft een `ValueError`. Schrijft naast de recordsoorten twee extra tabellen: `LEVERING` (één rij met de gegevens uit bestandsnaam en VLP) en `VALIDATIE` (de meldingen) |
 | `stack.py` | Prepared-mappen stapelen met de kolommen `Levering`, `Bekostigingsjaar`, `DatumAanmaak`, `Bestandsnaam` |
 | `star.py` | Star schema bouwen (§6) |
+| `indicatoren.py` | Pure functies op het star schema voor het dashboard (trechter, redenen, per opleiding, voorlopig tegenover definitief, historie), net als `indicatoren.py` bij MBO |
 | `cli.py` | `ho verwerk <bestand> <doel>`, `ho star <mappen…> --doel <map>` |
 
 Paden en drempelwaarden staan in `app/config.toml` en in constanten bovenaan
@@ -109,17 +113,22 @@ de modules; er staan geen vaste waarden midden in de code.
 
 ## 6. Star schema
 
-Negen Parquet-bestanden in `data/03-output/<bron>/star/`.
+Negen Parquet-bestanden in `data/03-output/<bron>/star/datamodel/`. Net als bij
+MBO worden **natuurlijke sleutels** gebruikt: `levering` (label van de
+prepared-map, gelijk aan de bestandsstam), `_persoon_id` (BSN, anders
+onderwijsnummer), `BRIN`, `Opleidingscode` en `Code`. Feitrijen krijgen een
+`_feit_id` (`D:`/`R:` + levering + rijnummer), zodat de brugtabel ernaar kan
+verwijzen; dat is nodig omdat `Inschrijvingvolgnummer` in HRD niet verplicht is.
 
 **Dimensies**
 
 | Tabel | Sleutel | Inhoud | Bron |
 |---|---|---|---|
-| `dim_levering` | `LeveringKey` | Levering, Bekostigingsjaar, DatumAanmaak, BrinOntvanger, Bestandsnaam | bestandsnaam + VLP |
-| `dim_persoon` | `PersoonKey` | Burgerservicenummer, Onderwijsnummer (sleutel: BSN, anders onderwijsnummer), datums behaalde graden (AD/ADLG/Ba/BaLG/Ma/MaLG). De dim-velden worden over leveringen heen samengevoegd, zoals MBO #41 | BLB, BRD, BRR, HRD, HRR |
-| `dim_instelling` | `InstellingKey` | Brin, `EigenInstelling` (Brin = BRIN in de VLP) | BRD/BRR/HRD/HRR |
-| `dim_opleiding` | `OpleidingKey` | Opleidingscode, Opleidingsniveau, OpleidingOnderdeel, IndicatieSectorLG, IndicatieAcademischZiekenhuis, en een `Opleidingsnaam` uit een optionele CROHO-lookup (leeg als die ontbreekt) | BRD/BRR/HRD/HRR |
-| `dim_status` | `StatusKey` | Code, Omschrijving, Groep, Bekostigd | `bekostigingstatus.csv` |
+| `dim_levering` | `levering` | SoortLevering (VLPBEK/DEFBEK/HISBEK), Bekostigingsjaar, DatumAanmaak, BrinOntvanger, Bestandsnaam | tabel `LEVERING` |
+| `dim_persoon` | `_persoon_id` | Burgerservicenummer, Onderwijsnummer, datums behaalde graden (AD/ADLG/Ba/BaLG/Ma/MaLG). De velden worden over leveringen heen samengevoegd (nieuwste levering eerst), zoals MBO #41 | BLB, BRD, BRR, HRD, HRR |
+| `dim_instelling` | `BRIN` | `EigenInstelling` (BRIN komt voor als BrinOntvanger) | BRD/BRR/HRD/HRR |
+| `dim_opleiding` | `Opleidingscode` | Opleidingsniveau, OpleidingOnderdeel, IndicatieSectorLG, IndicatieAcademischZiekenhuis (nieuwste levering eerst) | BRD/BRR/HRD/HRR |
+| `dim_status` | `Code` | Omschrijving, Groep, Bekostigd | `bekostigingstatus.csv` |
 
 **Feiten**
 
@@ -127,7 +136,7 @@ Negen Parquet-bestanden in `data/03-output/<bron>/star/`.
 |---|---|---|
 | `fact_deelname` | deelname × levering (BRD + HRD) | sleutels, Inschrijvingvolgnummer, Bekostigingsindicatie, Opleidingsfase, Onderwijsvorm, Inschrijvingsvorm, DatumInschrijving, DatumUitschrijving, EersteInschrijving, Bekostigingsniveau, Bekostigingsduur, Bekostigingscode, IndicatieBaMa, IndicatieNationaliteitsvoorwaardeSF, IndicatieGBARelatie, Bekostigingsjaar |
 | `fact_resultaat` | graad × levering (BRR + HRR) | sleutels, Resultaatvolgnummer, Bekostigingsindicatie, Opleidingsfase, datum graad, ECTS, ECTSBekostigd, JointDegreeFactor, Bekostigingsjaar |
-| `fact_status` | (deelname of resultaat) × statuscode | brugtabel: `Bron` (deelname/resultaat), verwijzing naar de feitrij, `StatusKey` |
+| `fact_status` | (deelname of resultaat) × statuscode | brugtabel: `_feit_id`, `Bron` (deelname/resultaat), `levering`, `Code` |
 | `fact_loopbaan` | persoon × levering (BLB) | verbruikstellers en aantallen bekostigde inschrijvingen (`-1` wordt `null` met een NVT-vlag) |
 
 Bij HRD en HRR komt het bekostigingsjaar uit het record zelf; bij BRD en BRR
@@ -147,8 +156,10 @@ Zelfde opbouw als bij MBO: `app/main.py` (navigatie, geen bedrijfslogica),
   uploaden van een los bestand en **Verwerk alles**. Het validatierapport
   staat per bestand als waarschuwing.
 - **Dashboard** (filters: bekostigingsjaar, levering, opleidingsniveau):
-  1. Bekostigingstrechter: deelnames en graden bij de eigen instelling, van
-     "aangeleverd" naar "wel/niet bekostigd".
+  1. Bekostigingstrechter: deelnames en graden bij de eigen instelling:
+     "in bestand" → "beoordeeld" (zonder status `mv`, want die deelnames
+     vallen buiten de beoordeling) → "bekostigd". **[Te checken: of `mv`
+     de juiste afbakening is voor "beoordeeld"]**
   2. Waarom niet bekostigd: aantallen per statusgroep en per code, met de
      omschrijving in gewone taal.
   3. Per opleiding: aandeel bekostigd.
@@ -177,9 +188,8 @@ de inhoud is gemaskeerd met `x`. Daarom komt er
 Kenmerken: fictieve BRIN `99XX` plus een andere instelling `71AA`; fictieve
 BSN's en onderwijsnummers in de reeks `7000xxxxx`/`8000xxxxx`, zoals in het
 wisselstroom-voorbeeld; een realistische mix van niveaus, fasen,
-onderwijsvormen en statuscodes (ook meervoudige zoals `na,ti`); de nieuwe
-BLB-versie. De oude BLB-versie wordt getest met een kleine fixture in
-`tests/`. Er komen geen echte persoonsgegevens in git;
+onderwijsvormen en statuscodes (ook meervoudige zoals `na,ti`); de huidige
+BLB-versie. Er komen geen echte persoonsgegevens in git;
 echte data staat in `.gitignore`.
 
 ## 9. Foutafhandeling
@@ -197,8 +207,8 @@ echte data staat in `.gitignore`.
 
 pytest op de demo-data. Tijdens het bouwen worden tests eerst geschreven (TDD).
 
-- `test_ingest.py`: splitsen per recordsoort, bestandsnaam ontleden, BLB oud en nieuw
-- `test_decode.py`: datums, J/N, `-1` naar n.v.t., statuscodes splitsen
+- `test_ingest.py`: splitsen per recordsoort, bestandsnaam ontleden, opgevulde regels, onbekende recordsoorten
+- `test_decode.py`: datums, J/N, `-1` naar n.v.t., getallen
 - `test_validate.py`: SLR-tellingen, onbekende codes of recordsoorten
 - `test_metadata.py`: 34 statuscodes aanwezig, geen dubbele codes, elke code heeft een groep
 - `test_stack.py`, `test_star.py`: invarianten uit §6
@@ -212,7 +222,9 @@ CI (GitHub Actions): `ruff check`, `ruff format --check`, `ty check`, `pytest`.
 1. Overige HO-bestanden: OBO, OBOV, registratieoverzicht, landelijk overzicht.
 2. Wisselstroom-labels en rendement of cohorten uit HISBEK (overlap met `cedanl/wisselstroom`).
 3. Gedeelde MBO/HO-kernbibliotheek, als na v1 duidelijk is welke code echt gedeeld is.
-4. Laten bevestigen: alle **[Te checken]**-punten in dit document.
+4. Namen van opleidingen en instellingen via RIO (`cedanl/rio-onderwijsdata`).
+5. Ondersteuning voor de oude BLB-versie (`_OUD`, tot 2019), als daar vraag naar is.
+6. Laten bevestigen: alle **[Te checken]**-punten in dit document.
 
 ## 12. Repo en werkwijze
 
