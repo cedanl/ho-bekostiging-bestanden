@@ -47,3 +47,5 @@ filterwarnings = ["error::DeprecationWarning"]
 
 [tool.ty.environment]
 python-version = "3.13"
+# De app importeert _utils/_tabel_docs via sys.path; laat ty ze ook vinden.
+extra-paths = ["app"]

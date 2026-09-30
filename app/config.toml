@@ -1,0 +1,7 @@
+# Datapaden voor de Streamlit-app. Wijzen standaard naar de demo-data.
+# Eigen data: zet een kopie van dit bestand elders en wijs ernaar met de
+# omgevingsvariabele HO_APP_CONFIG.
+[data]
+raw = "data/01-raw/demo"
+prepared = "data/02-prepared/demo"
+output = "data/03-output/demo"
