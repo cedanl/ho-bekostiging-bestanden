@@ -154,3 +154,38 @@ def test_star_contractbreuk_is_fail(tmp_path, vlpbek_bestand, monkeypatch):
     rapport = _rapport(tmp_path / "out")
     assert rapport["star"]["status"] == STATUS_FAIL
     assert rapport["leveringen"][0]["status"] == STATUS_OK
+
+
+def test_onverwerkbaar_bestand_is_error_in_rapport(tmp_path):
+    raw = tmp_path / "raw"
+    schrijf_bestand(raw, "VLPBEK_2025_20240115_99XX.csv", analyse_regels())
+    # DEFBEK zonder VLP kan niet verwerkt worden.
+    schrijf_bestand(raw, "DEFBEK_2025_20240715_99XX.csv", analyse_regels()[1:])
+    resultaat = verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
+    assert resultaat.status == STATUS_FAIL
+    rapport = _rapport(tmp_path / "out")
+    defbek = next(
+        lev
+        for lev in rapport["leveringen"]
+        if lev["levering"] == "DEFBEK_2025_20240715_99XX"
+    )
+    assert defbek["status"] == STATUS_FAIL
+    assert "VLP" in defbek["meldingen"][0]["melding"]
+
+
+def test_dubbel_bestand_is_warning(tmp_path):
+    raw = tmp_path / "raw"
+    schrijf_bestand(raw, "VLPBEK_2025_20240115_99XX.csv", analyse_regels())
+    schrijf_bestand(raw / "upload", "VLPBEK_2025_20240115_99XX.csv", analyse_regels())
+    resultaat = verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
+    assert resultaat.status == STATUS_WARN
+    assert resultaat.meldingen["Ernst"].to_list() == ["warning"]
+
+
+def test_dubbele_leveringslabels_zijn_invoerfout(tmp_path, vlpbek_bestand):
+    a = tmp_path / "a" / "lev"
+    b = tmp_path / "b" / "lev"
+    run_pipeline(vlpbek_bestand, a)
+    run_pipeline(vlpbek_bestand, b)
+    with pytest.raises(ValueError, match="lev"):
+        run_star([a, b], tmp_path / "out")

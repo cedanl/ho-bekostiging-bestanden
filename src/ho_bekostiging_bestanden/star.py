@@ -126,11 +126,9 @@ def _dim_levering(stacked: dict[str, pl.DataFrame]) -> pl.DataFrame:
         delen.append(
             levering.with_columns(ontbrekend).select(list(DIM_LEVERING_SCHEMA))
         )
-    return (
-        pl.concat(delen, how="vertical_relaxed")
-        .unique(LABEL_COL, keep="first", maintain_order=True)
-        .sort(LABEL_COL)
-    )
+    # Niet ontdubbelen: stack_prepared weigert dubbele labels, en het
+    # grain-contract in contracten.py bewaakt één rij per levering.
+    return pl.concat(delen, how="vertical_relaxed").sort(LABEL_COL)
 
 
 def _feiten(

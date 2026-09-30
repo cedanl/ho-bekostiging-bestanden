@@ -25,6 +25,7 @@ from ho_bekostiging_bestanden.kwaliteit import (
     BRON_KOLOM,
     ERNST_ERROR,
     ERNST_KOLOM,
+    ERNST_WARNING,
     MELDING_SCHEMA,
     QUALITY_JSON,
     RAPPORT_SCHEMA,
@@ -66,6 +67,15 @@ DATAMODEL_MAP = "datamodel"
 DUBBEL_MELDING = (
     "Dubbel: een bestand met dezelfde naam ({eerste}) is al verwerkt; overgeslagen."
 )
+# Bestanden die niet in een prepared-map terechtkomen. Een onverwerkbaar
+# bestand ontbreekt in de cijfers (error); een dubbel bestand is bewust één
+# keer geteld (warning).
+CONTROLE_BESTAND = "Bestand"
+CONTROLE_DUBBEL = "Dubbel"
+ERNST_PER_BESTANDSCONTROLE = {
+    CONTROLE_BESTAND: ERNST_ERROR,
+    CONTROLE_DUBBEL: ERNST_WARNING,
+}
 VEROUDERD_MELDING = (
     "Prepared-map zonder ernst per melding (van vóór de kwaliteitspoort); "
     "verwerk het bestand opnieuw."
@@ -213,12 +223,22 @@ def _star_meldingen(star: dict[str, pl.DataFrame]) -> pl.DataFrame:
 
 
 def _bouw_star(
-    sources: Sequence[Path | str], target: str | Path, fouten_toegestaan: bool
+    sources: Sequence[Path | str],
+    target: str | Path,
+    fouten_toegestaan: bool,
+    bestandsmeldingen: pl.DataFrame | None = None,
 ) -> tuple[dict[str, pl.DataFrame], pl.DataFrame]:
-    """Bouw en schrijf star schema en ``quality.json``; geef star en meldingen."""
+    """Bouw en schrijf star schema en ``quality.json``; geef star en meldingen.
+
+    ``bestandsmeldingen`` (``RAPPORT_SCHEMA``) zijn meldingen over bestanden
+    die niet in de prepared-mappen terechtkwamen (zie :func:`verwerk_alles`).
+    """
     stacked = stack_prepared(sources)
     star = build_star(stacked)
-    meldingen = pl.concat([_leveringmeldingen(sources, stacked), _star_meldingen(star)])
+    delen = [_leveringmeldingen(sources, stacked), _star_meldingen(star)]
+    if bestandsmeldingen is not None:
+        delen.append(bestandsmeldingen)
+    meldingen = pl.concat(delen)
     export_frames(star, Path(target) / DATAMODEL_MAP)
     dim_levering = star["dim_levering"]
     rapport = bouw_rapport(
@@ -318,14 +338,25 @@ def verwerk_alles(
         sleutel = laad_sleutel()
     resultaat = Verwerking()
     gezien: dict[str, Path] = {}
+    bestandsmeldingen: list[pl.DataFrame] = []
+
+    def meld(bestand: Path, controle: str, tekst: str) -> None:
+        rij = melding(
+            controle,
+            detect_levering(bestand) or "",
+            tekst,
+            ERNST_PER_BESTANDSCONTROLE[controle],
+        )
+        bestandsmeldingen.append(met_bron(meldingen_frame([rij]), bestand.stem))
+
     for bestand in vind_bestanden(raw):
         stam = bestand.stem.upper()
         if stam in gezien:
             # Zelfde levering twee keer (bijv. ook geüpload): één keer tellen.
             eerste = gezien[stam].relative_to(raw)
-            resultaat.fouten[str(bestand.relative_to(raw))] = DUBBEL_MELDING.format(
-                eerste=eerste
-            )
+            tekst = DUBBEL_MELDING.format(eerste=eerste)
+            resultaat.fouten[str(bestand.relative_to(raw))] = tekst
+            meld(bestand, CONTROLE_DUBBEL, tekst)
             continue
         gezien[stam] = bestand
         doel = Path(prepared) / bestand.stem
@@ -339,10 +370,16 @@ def verwerk_alles(
             )
         except ValueError as fout:
             resultaat.fouten[bestand.name] = str(fout)
+            meld(bestand, CONTROLE_BESTAND, str(fout))
             continue
         resultaat.prepared_dirs.append(doel)
     resultaat.star, resultaat.meldingen = _bouw_star(
-        resultaat.prepared_dirs, output, fouten_toegestaan=False
+        resultaat.prepared_dirs,
+        output,
+        fouten_toegestaan=False,
+        bestandsmeldingen=pl.concat(
+            [pl.DataFrame(schema=RAPPORT_SCHEMA), *bestandsmeldingen]
+        ),
     )
     resultaat.status = status(resultaat.meldingen)
     return resultaat

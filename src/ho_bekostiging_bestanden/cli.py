@@ -40,6 +40,12 @@ def _verwerk(args: argparse.Namespace) -> None:
     sleutel = (
         laad_sleutel(sleutelbestand=args.sleutelbestand) if pseudonimiseer else None
     )
+    if not pseudonimiseer:
+        # Vóór de verwerking: de uitvoer staat ook op schijf als de poort sluit.
+        print(
+            "Let op: BSN en onderwijsnummer zijn NIET gepseudonimiseerd.",
+            file=sys.stderr,
+        )
     frames = run_pipeline(
         args.source,
         args.target,
@@ -48,11 +54,6 @@ def _verwerk(args: argparse.Namespace) -> None:
         pseudonimiseer=pseudonimiseer,
         fail_on_errors=not args.allow_quality_errors,
     )
-    if not pseudonimiseer:
-        print(
-            "Let op: BSN en onderwijsnummer zijn NIET gepseudonimiseerd.",
-            file=sys.stderr,
-        )
     total = sum(df.height for df in frames.values())
     print(f"Verwerkt: {len(frames)} tabellen, {total} rijen -> {args.target}")
     validatie = frames[VALIDATIE]

@@ -97,3 +97,9 @@ def test_cli_alleen_warnings_exitcode_0(tmp_path, monkeypatch, capsys):
 def test_cli_invoerfout_blijft_exitcode_1(tmp_path, monkeypatch):
     bestaat_niet = tmp_path / "VLPBEK_2025_20240115_99XX.csv"
     assert _draai(monkeypatch, "verwerk", bestaat_niet, tmp_path / "p") == 1
+
+
+def test_cli_privacywaarschuwing_ook_bij_fail(tmp_path, monkeypatch, capsys):
+    args = ["verwerk", _fout_bestand(tmp_path), tmp_path / "prep"]
+    assert _draai(monkeypatch, *args, "--geen-pseudonimisering") == 3
+    assert "NIET gepseudonimiseerd" in capsys.readouterr().err

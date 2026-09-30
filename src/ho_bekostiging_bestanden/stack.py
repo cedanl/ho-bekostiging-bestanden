@@ -30,7 +30,8 @@ def stack_prepared(
     Raises:
         FileNotFoundError: Als een map niet bestaat.
         ValueError:        Als ``labels`` een andere lengte heeft dan ``sources``,
-                           of als een map geen Parquet-bestanden bevat.
+                           een label dubbel voorkomt, of een map geen
+                           Parquet-bestanden bevat.
     """
     paths = [Path(s) for s in sources]
     if not paths:
@@ -49,6 +50,13 @@ def stack_prepared(
             )
 
     labels = labels or [p.name for p in paths]
+    # Twee leveringen onder één label zouden stil samenvallen in het star schema.
+    dubbel = sorted({label for label in labels if labels.count(label) > 1})
+    if dubbel:
+        raise ValueError(
+            f"Leveringslabel(s) komen meer dan eens voor: {', '.join(dubbel)}. "
+            "Geef elke prepared-map een eigen naam."
+        )
     tables: dict[str, list[pl.DataFrame]] = {}
     for path, label in zip(paths, labels, strict=True):
         for parquet in sorted(path.glob("*.parquet")):
