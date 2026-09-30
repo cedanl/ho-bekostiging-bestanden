@@ -9,31 +9,18 @@ from pathlib import Path
 
 import pytest
 
-from ho_bekostiging_bestanden.metadata import load_schema
+from ho_bekostiging_bestanden.demo import maak_regel, schrijf_bestand
+from ho_bekostiging_bestanden.pipeline import verwerk_alles
 
-PAD_TOT = 25  # aantal velden waarop DUO elke regel opvult
+DEMO_RAW = Path(__file__).parents[1] / "data" / "01-raw" / "demo"
 
-
-def maak_regel(schema_naam: str, rs: str, **waarden: str) -> str:
-    """Bouw één `|`-regel; niet opgegeven velden blijven leeg."""
-    velden = load_schema(schema_naam)[rs]["fields"]
-    onbekend = set(waarden) - set(velden)
-    if onbekend:
-        raise KeyError(f"Onbekende velden voor {rs}: {sorted(onbekend)}")
-    return "|".join(
-        rs if veld == "Recordsoort" else waarden.get(veld, "") for veld in velden
-    )
-
-
-def schrijf_bestand(map_: Path, naam: str, regels: list[str]) -> Path:
-    """Schrijf regels met CRLF, opgevuld tot minstens ``PAD_TOT`` velden."""
-    opgevuld = []
-    for regel in regels:
-        tekort = PAD_TOT - 1 - regel.count("|")
-        opgevuld.append(regel + "|" * max(tekort, 0))
-    pad = map_ / naam
-    pad.write_bytes(("\r\n".join(opgevuld) + "\r\n").encode("utf-8"))
-    return pad
+__all__ = [
+    "DEMO_RAW",
+    "analyse_regels",
+    "hisbek_regels",
+    "maak_regel",
+    "schrijf_bestand",
+]
 
 
 def _brd(bsn: str, onr: str, brin: str, volgnr: str, ind: str, code: str) -> str:
@@ -202,3 +189,10 @@ def vlpbek_bestand(tmp_path: Path) -> Path:
 @pytest.fixture
 def hisbek_bestand(tmp_path: Path) -> Path:
     return schrijf_bestand(tmp_path, "HISBEK_2024_20250301_99XX.csv", hisbek_regels())
+
+
+@pytest.fixture(scope="session")
+def demo_star(tmp_path_factory) -> dict:
+    """Star schema van de demo-data (één keer per testsessie gebouwd)."""
+    basis = tmp_path_factory.mktemp("demo")
+    return verwerk_alles(DEMO_RAW, basis / "prep", basis / "out").star

@@ -1,0 +1,2 @@
+# DUO-bestanden hebben CRLF-regeleinden; git mag ze niet omzetten.
+data/01-raw/demo/*.csv -text
