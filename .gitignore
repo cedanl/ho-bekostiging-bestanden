@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv_cache/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Data
+# 01-raw: echte data genegeerd, alleen demo-bronbestanden in git
+data/01-raw/*
+!data/01-raw/demo/
+
+# 02-prepared en 03-output: gegenereerde output, nooit in git
+data/02-prepared/**
+!data/02-prepared/**/
+!data/02-prepared/**/.gitkeep
+data/03-output/**
+!data/03-output/**/
+!data/03-output/**/.gitkeep
+
+# Lokale referentiedocumenten (PvE e.d.)
+*.pdf
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Make dev/stop (Streamlit)
+.streamlit/.dev.pid
+.streamlit/.dev.log
+
+# Superpowers-werkplek (ledger, briefs)
+.superpowers/
