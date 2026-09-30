@@ -54,7 +54,7 @@ def detect_levering(path: str | Path) -> str | None:
 
 
 def _levering_tabel(
-    info: Bestandsinfo, vlp: pl.DataFrame, schema_name: str
+    info: Bestandsinfo, vlp: pl.DataFrame, schema_name: str, gepseudonimiseerd: bool
 ) -> pl.DataFrame:
     return pl.DataFrame(
         {
@@ -64,6 +64,7 @@ def _levering_tabel(
             "BrinOntvanger": [vlp["BRIN"][0]],
             "Bestandsnaam": [info.bestandsnaam],
             "SchemaVersie": [str(schema_meta(schema_name)["schema_version"])],
+            "Gepseudonimiseerd": [gepseudonimiseerd],
         },
         schema={
             "SoortLevering": pl.Utf8,
@@ -72,6 +73,7 @@ def _levering_tabel(
             "BrinOntvanger": pl.Utf8,
             "Bestandsnaam": pl.Utf8,
             "SchemaVersie": pl.Utf8,
+            "Gepseudonimiseerd": pl.Boolean,
         },
     )
 
@@ -89,6 +91,7 @@ def run_pipeline(
     target: str | Path,
     fmt: OutputFormat = "parquet",
     sleutel: bytes | None = None,
+    pseudonimiseer: bool = True,
 ) -> dict[str, pl.DataFrame]:
     """Verwerk één ruw analysebestand of HISBEK-bestand naar ``target``.
 
@@ -99,6 +102,9 @@ def run_pipeline(
         sleutel: Pseudonimiseringssleutel; standaard uit ``EENCIJFERHO_ENCRYPT_KEY``.
                  BSN en onderwijsnummer worden direct na het decoderen
                  gepseudonimiseerd, gelijk aan 1cijferho.
+        pseudonimiseer: Standaard ``True``. Met ``False`` blijven BSN en
+                 onderwijsnummer leesbaar en is geen sleutel nodig; de tabel
+                 ``LEVERING`` legt vast welke keuze is gemaakt.
 
     Returns:
         Dict van tabelnaam naar DataFrame: de recordsoorten plus ``LEVERING``
@@ -108,7 +114,8 @@ def run_pipeline(
         ValueError: Als de bestandsnaam niet herkend wordt, de VLP ontbreekt of
                     er geen (geldige) pseudonimiseringssleutel is.
     """
-    sleutel = sleutel if sleutel is not None else laad_sleutel()
+    if pseudonimiseer and sleutel is None:
+        sleutel = laad_sleutel()
     info = parse_bestandsnaam(source)
     if info is None:
         raise ValueError(
@@ -118,10 +125,13 @@ def run_pipeline(
         )
     schema_name = SCHEMA_PER_LEVERING[info.soort]
     frames = decode_frames(read_multi_record_csv(source, schema_name), schema_name)
-    frames = pseudonimiseer_frames(frames, sleutel)
+    if pseudonimiseer and sleutel is not None:
+        frames = pseudonimiseer_frames(frames, sleutel)
     rapport = valideer(frames, schema_name, info)
     uitvoer = {rs: df for rs, df in frames.items() if rs != MELDINGEN}
-    uitvoer[LEVERING] = _levering_tabel(info, frames[VOORLOOP], schema_name)
+    uitvoer[LEVERING] = _levering_tabel(
+        info, frames[VOORLOOP], schema_name, pseudonimiseer
+    )
     uitvoer[VALIDATIE] = rapport
     _maak_leeg(Path(target))
     export_frames(uitvoer, target, fmt=fmt)
@@ -178,7 +188,11 @@ def onherkende_bestanden(raw: Path) -> list[Path]:
 
 
 def verwerk_alles(
-    raw: Path, prepared: Path, output: Path, sleutel: bytes | None = None
+    raw: Path,
+    prepared: Path,
+    output: Path,
+    sleutel: bytes | None = None,
+    pseudonimiseer: bool = True,
 ) -> Verwerking:
     """Verwerk alle herkende bestanden in ``raw`` en bouw het star schema.
 
@@ -190,12 +204,14 @@ def verwerk_alles(
         prepared: Map voor de prepared-tabellen (één submap per bestand).
         output:   Map voor het star schema.
         sleutel:  Pseudonimiseringssleutel; standaard uit ``EENCIJFERHO_ENCRYPT_KEY``.
+        pseudonimiseer: Standaard ``True``; met ``False`` is geen sleutel nodig.
 
     Returns:
         :class:`Verwerking` met prepared-mappen, star schema, validatie en fouten.
     """
     # Eén keer laden: zonder geldige sleutel wordt niets verwerkt (ValueError).
-    sleutel = sleutel if sleutel is not None else laad_sleutel()
+    if pseudonimiseer and sleutel is None:
+        sleutel = laad_sleutel()
     resultaat = Verwerking()
     gezien: dict[str, Path] = {}
     for bestand in vind_bestanden(raw):
@@ -210,7 +226,9 @@ def verwerk_alles(
         gezien[stam] = bestand
         doel = Path(prepared) / bestand.stem
         try:
-            frames = run_pipeline(bestand, doel, sleutel=sleutel)
+            frames = run_pipeline(
+                bestand, doel, sleutel=sleutel, pseudonimiseer=pseudonimiseer
+            )
         except ValueError as fout:
             resultaat.fouten[bestand.name] = str(fout)
             continue

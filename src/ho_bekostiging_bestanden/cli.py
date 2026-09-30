@@ -1,7 +1,8 @@
 """CLI voor de HO-bekostigingsbestanden pipeline.
 
 Gebruik:
-    ho verwerk <source> <target> [--fmt parquet|csv]
+    ho verwerk <source> <target> [--fmt parquet|csv] [--sleutelbestand <pad>]
+               [--geen-pseudonimisering]
     ho star <map...> --output <map>
 """
 
@@ -14,8 +15,22 @@ from ho_bekostiging_bestanden.pseudonimisering import SLEUTEL_ENV, laad_sleutel
 
 
 def _verwerk(args: argparse.Namespace) -> None:
-    sleutel = laad_sleutel(sleutelbestand=args.sleutelbestand)
-    frames = run_pipeline(args.source, args.target, fmt=args.fmt, sleutel=sleutel)
+    pseudonimiseer = not args.geen_pseudonimisering
+    sleutel = (
+        laad_sleutel(sleutelbestand=args.sleutelbestand) if pseudonimiseer else None
+    )
+    frames = run_pipeline(
+        args.source,
+        args.target,
+        fmt=args.fmt,
+        sleutel=sleutel,
+        pseudonimiseer=pseudonimiseer,
+    )
+    if not pseudonimiseer:
+        print(
+            "Let op: BSN en onderwijsnummer zijn NIET gepseudonimiseerd.",
+            file=sys.stderr,
+        )
     total = sum(df.height for df in frames.values())
     print(f"Verwerkt: {len(frames)} tabellen, {total} rijen -> {args.target}")
 
@@ -47,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help=f"Bestand met de pseudonimiseringssleutel (standaard: ${SLEUTEL_ENV})",
+    )
+    p_verwerk.add_argument(
+        "--geen-pseudonimisering",
+        action="store_true",
+        dest="geen_pseudonimisering",
+        help="BSN en onderwijsnummer leesbaar laten (standaard: pseudonimiseren)",
     )
     p_verwerk.set_defaults(func=_verwerk)
 

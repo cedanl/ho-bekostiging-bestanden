@@ -71,7 +71,12 @@ persoon = pl.read_parquet("data/03-output/…/datamodel/dim_persoon.parquet")
 gekoppeld = ev.join(persoon, on="Burgerservicenummer", how="inner")
 ```
 
-- Zonder sleutel verwerkt de CLI niets (`ho verwerk … --sleutelbestand <pad>` kan ook).
+- Pseudonimisering staat **standaard aan**. Zonder sleutel verwerkt de CLI dan niets
+  (`ho verwerk … --sleutelbestand <pad>` kan ook).
+- Uitzetten kan expliciet: `ho verwerk … --geen-pseudonimisering`, of het vinkje op
+  Home uitzetten. BSN en onderwijsnummer blijven dan leesbaar; koppelen met
+  gepseudonimiseerde 1CHO-data kan dan niet. De keuze staat per levering in
+  `dim_levering.Gepseudonimiseerd`, en het star schema weigert een mix van beide.
 - De demo-app gebruikt een openbare demo-sleutel uit `app/config.toml` en waarschuwt
   daarvoor. Zet voor echte data altijd `EENCIJFERHO_ENCRYPT_KEY`; die gaat voor.
 - Het BSN wordt gepseudonimiseerd zoals het in het bestand staat (9 tekens, met

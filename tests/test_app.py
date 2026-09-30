@@ -99,3 +99,16 @@ def test_standaardconfig_heeft_demo_sleutel_van_voldoende_lengte():
 
     config = tomllib.loads((APP / "config.toml").read_text(encoding="utf-8"))
     assert len(config["security"]["demo_sleutel"].encode()) >= 64
+
+
+def test_home_pseudonimisering_uit_zonder_sleutel(tmp_path, monkeypatch):
+    _config_met(tmp_path, monkeypatch)
+    monkeypatch.delenv("EENCIJFERHO_ENCRYPT_KEY")
+    at = _pagina("home").run()
+    assert at.checkbox(key="pseudonimiseer").value is True
+    at.checkbox(key="pseudonimiseer").uncheck().run()
+    assert not at.button(key="verwerk_alles").disabled
+    assert any("leesbaar" in w.value for w in at.warning)
+    at.button(key="verwerk_alles").click().run()
+    assert not at.exception
+    assert (tmp_path / "out" / "datamodel" / "dim_persoon.parquet").exists()

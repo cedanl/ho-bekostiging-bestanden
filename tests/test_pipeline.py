@@ -30,6 +30,7 @@ def test_run_pipeline_vlpbek(tmp_path, vlpbek_bestand):
         "BrinOntvanger": "99XX",
         "Bestandsnaam": "VLPBEK_2025_20240115_99XX.csv",
         "SchemaVersie": "26.3.1",
+        "Gepseudonimiseerd": True,
     }
     assert frames[VALIDATIE].height == 0
 

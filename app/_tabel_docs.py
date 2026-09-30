@@ -23,14 +23,15 @@ TABEL_DOCS: dict[str, dict[str, str]] = {
         "wat": (
             "Eén regel per verwerkt bestand: soort levering (VLPBEK = voorlopig, "
             "DEFBEK = definitief, HISBEK = historisch), bekostigingsjaar, "
-            "aanmaakdatum en de instelling (BRIN) die het bestand ontving."
+            "aanmaakdatum, de instelling (BRIN) die het bestand ontving en of "
+            "BSN en onderwijsnummer gepseudonimiseerd zijn."
         ),
         "bron": "Bestandsnaam en voorlooprecord (VLP) van elk bestand.",
     },
     "dim_persoon": {
         "titel": "Personen",
         "wat": (
-            "Eén regel per student, met gepseudonimiseerd BSN en/of "
+            "Eén regel per student, met (standaard gepseudonimiseerd) BSN en/of "
             "onderwijsnummer en de datums waarop een eerste AD-, bachelor- of "
             "mastergraad is behaald. De pseudoniemen zijn gelijk aan die van "
             "1cijferho (met dezelfde sleutel), zodat je op `Burgerservicenummer` "

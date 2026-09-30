@@ -6,7 +6,12 @@ import polars as pl
 import pytest
 
 from ho_bekostiging_bestanden.cli import main
-from ho_bekostiging_bestanden.pipeline import run_pipeline, verwerk_alles
+from ho_bekostiging_bestanden.pipeline import (
+    LEVERING,
+    run_pipeline,
+    run_star,
+    verwerk_alles,
+)
 from ho_bekostiging_bestanden.pseudonimisering import (
     SLEUTEL_ENV,
     laad_sleutel,
@@ -112,3 +117,54 @@ def test_bsn_wordt_gepseudonimiseerd_zoals_het_in_het_bestand_staat(tmp_path):
     pad = schrijf_bestand(tmp_path, "VLPBEK_2025_20240115_99XX.csv", regels)
     frames = run_pipeline(pad, tmp_path / "prep")
     assert frames["BRD"]["Burgerservicenummer"][0] == REFERENTIE_1CIJFERHO["012345678"]
+
+
+# ── Optioneel: standaard aan, expliciet uit te zetten ─────────────────────────
+
+
+def test_uitgezet_werkt_zonder_sleutel_en_houdt_bsn_leesbaar(
+    tmp_path, vlpbek_bestand, monkeypatch
+):
+    monkeypatch.delenv(SLEUTEL_ENV)
+    frames = run_pipeline(vlpbek_bestand, tmp_path / "prep", pseudonimiseer=False)
+    assert frames["BRD"]["Burgerservicenummer"][0] == "700010001"
+    assert frames[LEVERING]["Gepseudonimiseerd"][0] is False
+
+
+def test_standaard_aan_en_vastgelegd_in_levering(tmp_path, vlpbek_bestand):
+    frames = run_pipeline(vlpbek_bestand, tmp_path / "prep")
+    assert frames[LEVERING]["Gepseudonimiseerd"][0] is True
+
+
+def test_star_weigert_gemengde_leveringen(tmp_path):
+    raw = tmp_path / "raw"
+    a = schrijf_bestand(raw, "VLPBEK_2025_20240115_99XX.csv", analyse_regels())
+    b = schrijf_bestand(raw, "DEFBEK_2025_20240715_99XX.csv", analyse_regels())
+    run_pipeline(a, tmp_path / "prep" / a.stem)
+    run_pipeline(b, tmp_path / "prep" / b.stem, pseudonimiseer=False)
+    with pytest.raises(ValueError, match="gepseudonimiseerd"):
+        run_star(
+            [tmp_path / "prep" / a.stem, tmp_path / "prep" / b.stem], tmp_path / "out"
+        )
+
+
+def test_verwerk_alles_uitgezet(tmp_path, vlpbek_bestand, monkeypatch):
+    monkeypatch.delenv(SLEUTEL_ENV)
+    star = verwerk_alles(
+        vlpbek_bestand.parent, tmp_path / "prep", tmp_path / "out", pseudonimiseer=False
+    ).star
+    assert "700010001" in star["dim_persoon"]["_persoon_id"].to_list()
+
+
+def test_cli_geen_pseudonimisering(tmp_path, vlpbek_bestand, monkeypatch):
+    monkeypatch.delenv(SLEUTEL_ENV)
+    doel = tmp_path / "prep"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["ho", "verwerk", str(vlpbek_bestand), str(doel), "--geen-pseudonimisering"],
+    )
+    main()
+    assert (
+        pl.read_parquet(doel / "BRD.parquet")["Burgerservicenummer"][0] == "700010001"
+    )
