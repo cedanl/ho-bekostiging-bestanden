@@ -75,7 +75,8 @@ CHART_DOCS: dict[str, dict] = {
             "Per bekostigingsjaar wordt de nieuwste VLPBEK naast de nieuwste "
             "DEFBEK gelegd. Deelnames worden gekoppeld op jaar, BRIN, "
             "inschrijvingvolgnummer en persoon; getoond worden alleen de "
-            "deelnames waarvan de statuscode veranderde."
+            "deelnames waarvan de statuscode veranderde. Alleen jaren waarvoor "
+            "zowel een VLPBEK als een DEFBEK is verwerkt, tellen mee."
         ),
     },
     "historie": {

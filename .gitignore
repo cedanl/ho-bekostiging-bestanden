@@ -11,6 +11,8 @@ __pycache__/
 # 01-raw: echte data genegeerd, alleen demo-bronbestanden in git
 data/01-raw/*
 !data/01-raw/demo/
+# Uploads via de app zijn echte bestanden (met BSN's): nooit committen.
+data/01-raw/demo/upload/
 
 # 02-prepared en 03-output: gegenereerde output, nooit in git
 data/02-prepared/**

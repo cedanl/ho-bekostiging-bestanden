@@ -73,3 +73,28 @@ def test_dashboard_met_een_levering(tmp_path, monkeypatch, bestand):
     at = _dashboard().run()
     assert not at.exception
     assert at.info  # uitleg bij de grafieken waarvoor data ontbreekt
+
+
+def test_redenen_zonder_deelnames_claimt_niet_alles_bekostigd(tmp_path, monkeypatch):
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    shutil.copy(DEMO_RAW / "HISBEK_2024_20250301_99XX.csv", raw)
+    _config(tmp_path, monkeypatch, raw)
+    verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
+    at = _dashboard().run()
+    teksten = " ".join(i.value for i in at.info)
+    assert "Alle beoordeelde deelnames" not in teksten
+    assert "Geen deelnames in deze selectie" in teksten
+
+
+def test_voorlopig_definitief_verschillende_jaren(tmp_path, monkeypatch):
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    for naam in ["VLPBEK_2026_20250115_99XX.csv", "DEFBEK_2025_20240715_99XX.csv"]:
+        shutil.copy(DEMO_RAW / naam, raw)
+    _config(tmp_path, monkeypatch, raw)
+    verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
+    at = _dashboard().run()
+    teksten = " ".join(i.value for i in at.info)
+    assert "Geen statuswijzigingen" not in teksten
+    assert "hetzelfde jaar" in teksten

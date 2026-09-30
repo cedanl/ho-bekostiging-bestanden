@@ -135,13 +135,14 @@ def _feiten(
     jaar = dim_levering.select(LABEL_COL, pl.col("Bekostigingsjaar").alias("_jaar"))
     df = (
         _met_template(stacked, bronnen)
-        .join(jaar, on=LABEL_COL, how="left")
+        .join(jaar, on=LABEL_COL, how="left", maintain_order="left")
         .with_columns(
             pl.coalesce("Bekostigingsjaar", "_jaar").alias("Bekostigingsjaar"),
             _persoon_id(),
         )
         .drop("_jaar", *PERSOON_VELDEN, *OPLEIDING_VELDEN)
-        .with_row_index("_rij")
+        # Rijnummer per levering: stabiel als er een levering bijkomt.
+        .with_columns(pl.int_range(pl.len()).over(LABEL_COL).alias("_rij"))
         .with_columns(
             pl.concat_str(
                 [pl.lit(prefix), pl.col(LABEL_COL), pl.col("_rij").cast(pl.Utf8)],

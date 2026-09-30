@@ -74,6 +74,9 @@ def _tab_trechter(deelnames: pl.DataFrame, resultaten: pl.DataFrame) -> None:
 
 def _tab_redenen(deelnames: pl.DataFrame, star: dict[str, pl.DataFrame]) -> None:
     chart_help("redenen")
+    if deelnames.is_empty():
+        st.info("Geen deelnames in deze selectie.")
+        return
     redenen = ind.redenen_niet_bekostigd(deelnames, star)
     if redenen.is_empty():
         st.info("Alle beoordeelde deelnames in deze selectie zijn bekostigd.")
@@ -97,9 +100,7 @@ def _tab_opleiding(deelnames: pl.DataFrame) -> None:
 
 def _tab_voorlopig_definitief(star: dict[str, pl.DataFrame]) -> None:
     chart_help("voorlopig_definitief")
-    if not (
-        ind.heeft_soort(star, ind.VOORLOPIG) and ind.heeft_soort(star, ind.DEFINITIEF)
-    ):
+    if not ind.vergelijkbare_jaren(star):
         st.info(
             "Verwerk een VLPBEK- én een DEFBEK-bestand van hetzelfde jaar "
             "om te vergelijken."

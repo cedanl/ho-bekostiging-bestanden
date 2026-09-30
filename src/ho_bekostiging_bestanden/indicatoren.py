@@ -51,6 +51,17 @@ def actuele_leveringen(star: dict[str, pl.DataFrame], soort: str) -> list[str]:
     )
 
 
+def vergelijkbare_jaren(star: dict[str, pl.DataFrame]) -> list[int]:
+    """Bekostigingsjaren waarvoor zowel een VLPBEK als een DEFBEK is verwerkt."""
+
+    def jaren(soort: str) -> set[int]:
+        leveringen = actuele_leveringen(star, soort)
+        dim = star["dim_levering"].filter(pl.col(LABEL_COL).is_in(leveringen))
+        return set(dim["Bekostigingsjaar"].drop_nulls().to_list())
+
+    return sorted(jaren(VOORLOPIG) & jaren(DEFINITIEF))
+
+
 def feiten(
     star: dict[str, pl.DataFrame],
     feit: str,
@@ -155,7 +166,7 @@ def _status_per_deelname(star: dict[str, pl.DataFrame], soort: str) -> pl.DataFr
 
 def voorlopig_vs_definitief(star: dict[str, pl.DataFrame]) -> pl.DataFrame:
     """Deelnames waarvan de status tussen voorlopig en definitief veranderde."""
-    if not (heeft_soort(star, VOORLOPIG) and heeft_soort(star, DEFINITIEF)):
+    if not vergelijkbare_jaren(star):
         return pl.DataFrame(schema=_VERSCHIL_SCHEMA)
     return (
         _status_per_deelname(star, VOORLOPIG)

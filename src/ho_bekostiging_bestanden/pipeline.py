@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import get_args
 
 import polars as pl
 
@@ -35,6 +36,9 @@ __all__ = [
 ]
 
 DATAMODEL_MAP = "datamodel"
+DUBBEL_MELDING = (
+    "Dubbel: een bestand met dezelfde naam ({eerste}) is al verwerkt; overgeslagen."
+)
 
 
 def detect_levering(path: str | Path) -> str | None:
@@ -64,6 +68,14 @@ def _levering_tabel(
             "SchemaVersie": pl.Utf8,
         },
     )
+
+
+def _maak_leeg(target: Path) -> None:
+    """Verwijder eerder geëxporteerde tabellen, zodat een recordsoort die in de
+    nieuwe versie van het bestand ontbreekt niet blijft hangen."""
+    for fmt in get_args(OutputFormat):
+        for pad in target.glob(f"*.{fmt}"):
+            pad.unlink()
 
 
 def run_pipeline(
@@ -98,6 +110,7 @@ def run_pipeline(
     uitvoer = {rs: df for rs, df in frames.items() if rs != MELDINGEN}
     uitvoer[LEVERING] = _levering_tabel(info, frames[VOORLOOP], schema_name)
     uitvoer[VALIDATIE] = rapport
+    _maak_leeg(Path(target))
     export_frames(uitvoer, target, fmt=fmt)
     return uitvoer
 
@@ -142,8 +155,8 @@ def vind_bestanden(raw: Path) -> list[Path]:
 def verwerk_alles(raw: Path, prepared: Path, output: Path) -> Verwerking:
     """Verwerk alle herkende bestanden in ``raw`` en bouw het star schema.
 
-    Een bestand dat niet verwerkt kan worden (bijv. zonder VLP) komt in
-    ``fouten``; de overige bestanden gaan gewoon door.
+    Een bestand dat niet verwerkt kan worden (bijv. zonder VLP) of dat dubbel
+    voorkomt, komt in ``fouten``; de overige bestanden gaan gewoon door.
 
     Args:
         raw:      Map met ruwe bestanden.
@@ -154,7 +167,17 @@ def verwerk_alles(raw: Path, prepared: Path, output: Path) -> Verwerking:
         :class:`Verwerking` met prepared-mappen, star schema, validatie en fouten.
     """
     resultaat = Verwerking()
+    gezien: dict[str, Path] = {}
     for bestand in vind_bestanden(raw):
+        sleutel = bestand.stem.upper()
+        if sleutel in gezien:
+            # Zelfde levering twee keer (bijv. ook geüpload): één keer tellen.
+            eerste = gezien[sleutel].relative_to(raw)
+            resultaat.fouten[str(bestand.relative_to(raw))] = DUBBEL_MELDING.format(
+                eerste=eerste
+            )
+            continue
+        gezien[sleutel] = bestand
         doel = Path(prepared) / bestand.stem
         try:
             frames = run_pipeline(bestand, doel)
