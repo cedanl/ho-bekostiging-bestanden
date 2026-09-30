@@ -122,11 +122,31 @@ In Windows PowerShell werkt `*` niet als argument; geef de mappen dan zo mee:
 uv run ho star (Get-ChildItem data/02-prepared/demo -Directory).FullName --output data/03-output/demo
 ```
 
+### Kwaliteit en exitcodes
+
+Elke controle levert een melding met een ernst: `error` of `warning`. Eén
+error zet de status op `fail`. De uitvoer wordt altijd geschreven, zodat je
+de oorzaak kunt nalezen: per levering in de tabel `VALIDATIE`, en voor het
+geheel in `<output>/quality.json`. Dat bestand bevat de status, alle
+meldingen per levering en voor het star schema, de sha256 van elk
+bronbestand, het aantal rijen per levering × recordsoort en de pakketversie
+(schema: `src/ho_bekostiging_bestanden/metadata/quality.schema.json`).
+
+| Exitcode | Betekenis |
+|---|---|
+| 0 | Klaar; status `ok` of `warn` |
+| 1 | Invoerfout (onbekend bestand, geen VLP, geen sleutel) |
+| 3 | Kwaliteitsstatus `fail` |
+
+Met `--allow-quality-errors` (bij `verwerk` en `star`) geeft een `fail`
+exitcode 0 en een regel "Let op: kwaliteitsstatus fail". De app toont de
+status op Home en als banner op Dashboard en Resultaten.
+
 ## Datamodel
 
 | Tabel | Eén rij per |
 |---|---|
-| `dim_levering` | verwerkt bestand |
+| `dim_levering` | verwerkt bestand (met `Sha256` van het bronbestand) |
 | `dim_persoon` | student (`_persoon_id` = BSN, anders onderwijsnummer) |
 | `dim_instelling` | BRIN (`EigenInstelling` = ontvanger van het bestand) |
 | `dim_opleiding` | opleidingscode |
