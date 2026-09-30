@@ -1,0 +1,128 @@
+# Veldschema voor het analysebestand voorlopige/definitieve bekostiging HO
+# (VLPBEK / DEFBEK). Bron: PvE HO-instelling – DUO v26.3.1, bijlage 8 (§17.7).
+# Alleen de huidige BLB-versie (niet de "_OUD"-versie van vóór sept. 2019).
+schema_version = "26.3.1"
+bron = "PvE HO-instelling – DUO, bijlage 8"
+
+[VLP]
+single_row      = true
+fields          = ["Recordsoort", "BRIN", "Bekostigingsjaar", "DatumAanmaak"]
+date_fields     = ["DatumAanmaak"]
+int_fields      = ["Bekostigingsjaar"]
+required_fields = ["Recordsoort", "BRIN", "Bekostigingsjaar", "DatumAanmaak"]
+
+[BLB]
+fields = [
+    "Recordsoort", "Burgerservicenummer", "Onderwijsnummer",
+    "DatumGraadBehaaldAD", "DatumGraadBehaaldADLG",
+    "DatumGraadBehaaldBa", "DatumGraadBehaaldBaLG",
+    "DatumGraadBehaaldMa", "DatumGraadBehaaldMaLG",
+    "VerbruikAD", "VerbruikADLG", "VerbruikBA", "VerbruikBALG",
+    "VerbruikMA", "VerbruikMALG",
+    "AantalBekostigdeInschrijvingenBa", "AantalBekostigdeInschrijvingenBaLG",
+    "AantalBekostigdeInschrijvingenMa", "AantalBekostigdeInschrijvingenMaLG",
+    "AantalBekostigdeInschrijvingenBaLGnaGraadBaMa",
+    "AantalBekostigdeInschrijvingenMaLGnaGraadMa",
+]
+date_fields = [
+    "DatumGraadBehaaldAD", "DatumGraadBehaaldADLG",
+    "DatumGraadBehaaldBa", "DatumGraadBehaaldBaLG",
+    "DatumGraadBehaaldMa", "DatumGraadBehaaldMaLG",
+]
+int_fields = [
+    "VerbruikAD", "VerbruikADLG", "VerbruikBA", "VerbruikBALG",
+    "VerbruikMA", "VerbruikMALG",
+    "AantalBekostigdeInschrijvingenBa", "AantalBekostigdeInschrijvingenBaLG",
+    "AantalBekostigdeInschrijvingenMa", "AantalBekostigdeInschrijvingenMaLG",
+    "AantalBekostigdeInschrijvingenBaLGnaGraadBaMa",
+    "AantalBekostigdeInschrijvingenMaLGnaGraadMa",
+]
+nvt_fields = [
+    "VerbruikAD", "VerbruikADLG", "VerbruikBA", "VerbruikBALG",
+    "VerbruikMA", "VerbruikMALG",
+    "AantalBekostigdeInschrijvingenBa", "AantalBekostigdeInschrijvingenBaLG",
+    "AantalBekostigdeInschrijvingenMa", "AantalBekostigdeInschrijvingenMaLG",
+    "AantalBekostigdeInschrijvingenBaLGnaGraadBaMa",
+    "AantalBekostigdeInschrijvingenMaLGnaGraadMa",
+]
+required_fields = ["Recordsoort"]
+
+[BRD]
+fields = [
+    "Recordsoort", "Burgerservicenummer", "Onderwijsnummer", "BRIN",
+    "Inschrijvingvolgnummer", "Bekostigingsindicatie", "CodeBekostigingstatus",
+    "Bekostigingsniveau", "Opleidingscode", "Opleidingsniveau", "Opleidingsfase",
+    "DatumInschrijving", "DatumUitschrijving", "EersteInschrijving",
+    "Inschrijvingsvorm", "Onderwijsvorm", "DatumEersteAanlevering",
+    "Bekostigingsduur", "OpleidingOnderdeel", "Bekostigingscode",
+    "IndicatieSectorLG", "IndicatieBaMa", "IndicatieAcademischZiekenhuis",
+    "IndicatieNationaliteitsvoorwaardeSF", "IndicatieGBARelatie",
+]
+date_fields = ["DatumInschrijving", "DatumUitschrijving", "DatumEersteAanlevering"]
+bool_fields = [
+    "Bekostigingsindicatie", "EersteInschrijving", "IndicatieSectorLG",
+    "IndicatieAcademischZiekenhuis", "IndicatieNationaliteitsvoorwaardeSF",
+    "IndicatieGBARelatie",
+]
+int_fields = ["Bekostigingsduur"]
+required_fields = [
+    "Recordsoort", "BRIN", "Inschrijvingvolgnummer", "Bekostigingsindicatie",
+    "CodeBekostigingstatus", "Opleidingscode", "Opleidingsniveau",
+    "Opleidingsfase", "DatumInschrijving", "DatumUitschrijving",
+    "EersteInschrijving", "Inschrijvingsvorm", "Onderwijsvorm",
+    "DatumEersteAanlevering",
+]
+
+[BRD.codelijsten]
+CodeBekostigingstatus = "bekostigingstatus"
+Bekostigingsniveau    = "bekostigingsniveau"
+Opleidingsniveau      = "opleidingsniveau"
+Opleidingsfase        = "opleidingsfase"
+Inschrijvingsvorm     = "inschrijvingsvorm"
+Onderwijsvorm         = "onderwijsvorm"
+OpleidingOnderdeel    = "opleidingonderdeel"
+Bekostigingscode      = "bekostigingscode"
+IndicatieBaMa         = "indicatiebama"
+
+[BRR]
+fields = [
+    "Recordsoort", "Burgerservicenummer", "Onderwijsnummer", "BRIN",
+    "Resultaatvolgnummer", "Bekostigingsindicatie", "CodeBekostigingstatus",
+    "Bekostigingsniveau", "JointDegreeFactor", "Opleidingscode",
+    "Opleidingsniveau", "Opleidingsfase", "EersteGraad", "DatumDiploma",
+    "Onderwijsvorm", "DatumEersteAanlevering", "OpleidingOnderdeel",
+    "Bekostigingscode", "IndicatieSectorLG", "IndicatieBaMa",
+    "IndicatieAcademischZiekenhuis", "IndicatieGraadTeltVoorBekostigingsloopbaan",
+    "IndicatieNationaliteitsvoorwaardeSF", "IndicatieGBARelatie",
+]
+date_fields = ["DatumDiploma", "DatumEersteAanlevering"]
+bool_fields = [
+    "Bekostigingsindicatie", "EersteGraad", "IndicatieSectorLG",
+    "IndicatieAcademischZiekenhuis", "IndicatieGraadTeltVoorBekostigingsloopbaan",
+    "IndicatieNationaliteitsvoorwaardeSF", "IndicatieGBARelatie",
+]
+float_fields = ["JointDegreeFactor"]
+required_fields = [
+    "Recordsoort", "BRIN", "Resultaatvolgnummer", "Bekostigingsindicatie",
+    "CodeBekostigingstatus", "Bekostigingsniveau", "Opleidingscode",
+    "Opleidingsniveau", "Opleidingsfase", "EersteGraad", "DatumDiploma",
+    "Onderwijsvorm", "DatumEersteAanlevering",
+    "IndicatieGraadTeltVoorBekostigingsloopbaan",
+    "IndicatieNationaliteitsvoorwaardeSF", "IndicatieGBARelatie",
+]
+
+[BRR.codelijsten]
+CodeBekostigingstatus = "bekostigingstatus"
+Bekostigingsniveau    = "bekostigingsniveau"
+Opleidingsniveau      = "opleidingsniveau"
+Opleidingsfase        = "opleidingsfase"
+Onderwijsvorm         = "onderwijsvorm"
+OpleidingOnderdeel    = "opleidingonderdeel"
+Bekostigingscode      = "bekostigingscode"
+IndicatieBaMa         = "indicatiebama"
+
+[SLR]
+single_row      = true
+fields          = ["Recordsoort", "AantalBLBrecords", "AantalBRDrecords", "AantalBRRrecords"]
+int_fields      = ["AantalBLBrecords", "AantalBRDrecords", "AantalBRRrecords"]
+required_fields = ["Recordsoort", "AantalBLBrecords", "AantalBRDrecords", "AantalBRRrecords"]

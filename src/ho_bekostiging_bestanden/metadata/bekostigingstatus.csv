@@ -1,0 +1,35 @@
+Code,Omschrijving,Groep,Bekostigd
+pi,De inschrijving wordt bekostigd,Wel bekostigd,J
+pd,De inschrijving wordt deels bekostigd,Wel bekostigd,J
+pg,De graad wordt bekostigd,Wel bekostigd,J
+pb,"Ongedeelde opleiding: alleen de (impliciete) BA-graad wordt bekostigd, niet de MA-graad",Wel bekostigd,J
+pm,"Ongedeelde opleiding: alleen de MA-graad wordt bekostigd, niet de (impliciete) BA-graad",Wel bekostigd,J
+po,Ongedeelde opleiding: zowel de (impliciete) BA- als de MA-graad wordt bekostigd,Wel bekostigd,J
+ex,Het betreft een extraneus-inschrijving,Status van de student,N
+jk,Meerdere eerste inschrijvingen aangeleverd voor verschillende opleidingen,Status van de student,N
+jl,Geen opleiding van eerste inschrijving (eerste inschrijving is N),Status van de student,N
+jm,Meerdere eerste inschrijvingen voor dezelfde opleiding aan dezelfde instelling,Status van de student,N
+na,De student voldoet niet aan het woonplaatsvereiste,Status van de student,N
+nr,De student voldoet niet aan het nationaliteitsvereiste,Status van de student,N
+nb,Niet bekostigd i.v.m. eerder behaalde graad/graden,Verbruik en limieten,N
+nd,De student heeft al eerder een MA-graad behaald,Verbruik en limieten,N
+nf,Maximaal aantal bekostigde inschrijvingen overschreden (rekening houdend met eerdere graden),Verbruik en limieten,N
+ng,Maximaal aantal bekostigde inschrijvingen overschreden (nog geen graad behaald),Verbruik en limieten,N
+nh,Ongedeelde opleiding: toegestane te bekostigen jaren MA verbruikt,Verbruik en limieten,N
+ni,Ongedeelde opleiding: toegestane jaren MA in een uitzonderingscategorie verbruikt,Verbruik en limieten,N
+nk,Toegestane te bekostigen jaren of studielast MA verbruikt,Verbruik en limieten,N
+ne,Geen voor bekostiging relevante graad of een AD-graad,Graad-specifiek,N
+np,Graad die niet voor bekostiging in aanmerking komt (opleidingsfase P of D of A),Graad-specifiek,N
+ns,Aan verschillende instellingen op dezelfde dag een zelfde soort graad behaald,Graad-specifiek,N
+nt,"Meerdere graden aan dezelfde instelling, slechts één wordt bekostigd",Graad-specifiek,N
+no,Ongedeelde opleiding waarvan de behaalde graden (BA en MA) beide niet bekostigd worden,Graad-specifiek,N
+mt,De graad is behaald na de peilperiode,Tijdvak,N
+mu,De graad is behaald vóór de peilperiode,Tijdvak,N
+mv,De inschrijving is niet geldig op de peildatum / valt buiten het bekostigingsjaar,Tijdvak,N
+mw,Graad zonder bijbehorende op datum diploma geldige inschrijving,Tijdvak,N
+ob,Datum diploma valt niet in de accreditatieperiode,Opleiding,N
+oc,Het betreft geen geaccrediteerde opleiding,Opleiding,N
+ti,De inschrijving is niet tijdig aangeleverd,Aanlevering,N
+tg,De graad is niet tijdig aangeleverd,Aanlevering,N
+nl,Aangeleverd met de markering om niet te bekostigen,Aanlevering,N
+nc,Niet bekostigd vanuit de conversie naar HORS,Overig,N

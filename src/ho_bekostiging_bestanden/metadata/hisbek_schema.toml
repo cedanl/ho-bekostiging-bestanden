@@ -1,0 +1,96 @@
+# Veldschema voor het bestand historische bekostiging HO (HISBEK).
+# Bron: PvE HO-instelling – DUO v26.3.1, bijlage 10 (§19.7).
+# Het VLP-record heeft hier geen bekostigingsjaar; dat staat per HRD/HRR-record.
+schema_version = "26.3.1"
+bron = "PvE HO-instelling – DUO, bijlage 10"
+
+[VLP]
+single_row      = true
+fields          = ["Recordsoort", "BRIN", "DatumAanmaak"]
+date_fields     = ["DatumAanmaak"]
+required_fields = ["Recordsoort", "BRIN", "DatumAanmaak"]
+
+[HRD]
+fields = [
+    "Recordsoort", "Burgerservicenummer", "Onderwijsnummer", "Bekostigingsjaar",
+    "BRIN", "Inschrijvingvolgnummer", "Bekostigingsindicatie",
+    "CodeBekostigingstatus", "Bekostigingsniveau", "Opleidingscode",
+    "Opleidingsniveau", "Opleidingsfase", "DatumInschrijving",
+    "DatumUitschrijving", "EersteInschrijving", "Inschrijvingsvorm",
+    "Onderwijsvorm", "DatumEersteAanlevering", "Bekostigingsduur", "ECTS",
+    "ECTSBekostigd", "OpleidingOnderdeel", "Bekostigingscode",
+    "IndicatieSectorLG", "IndicatieBaMa", "IndicatieAcademischZiekenhuis",
+    "DuitseDeelstaat", "IndicatieWoonplaatsVereiste",
+    "IndicatieNationaliteitsvoorwaardeSF", "IndicatieGBARelatie",
+]
+date_fields = ["DatumInschrijving", "DatumUitschrijving", "DatumEersteAanlevering"]
+bool_fields = [
+    "Bekostigingsindicatie", "EersteInschrijving", "IndicatieSectorLG",
+    "IndicatieAcademischZiekenhuis", "IndicatieWoonplaatsVereiste",
+    "IndicatieNationaliteitsvoorwaardeSF", "IndicatieGBARelatie",
+]
+int_fields = ["Bekostigingsjaar", "Bekostigingsduur"]
+float_fields = ["ECTS", "ECTSBekostigd"]
+required_fields = [
+    "Recordsoort", "Bekostigingsjaar", "BRIN", "Bekostigingsindicatie",
+    "CodeBekostigingstatus", "Opleidingscode", "Opleidingsniveau",
+    "Opleidingsfase", "DatumInschrijving", "EersteInschrijving",
+    "Inschrijvingsvorm", "Onderwijsvorm",
+]
+
+[HRD.codelijsten]
+CodeBekostigingstatus = "bekostigingstatus"
+Bekostigingsniveau    = "bekostigingsniveau"
+Opleidingsniveau      = "opleidingsniveau"
+Opleidingsfase        = "opleidingsfase"
+Inschrijvingsvorm     = "inschrijvingsvorm"
+Onderwijsvorm         = "onderwijsvorm"
+OpleidingOnderdeel    = "opleidingonderdeel"
+Bekostigingscode      = "bekostigingscode"
+IndicatieBaMa         = "indicatiebama"
+
+[HRR]
+fields = [
+    "Recordsoort", "Burgerservicenummer", "Onderwijsnummer", "Bekostigingsjaar",
+    "BRIN", "Resultaatvolgnummer", "Bekostigingsindicatie",
+    "CodeBekostigingstatus", "Bekostigingsniveau", "JointDegreeFactor",
+    "Opleidingscode", "Opleidingsniveau", "Opleidingsfase", "EersteGraad",
+    "DatumDiploma", "Onderwijsvorm", "DatumEersteAanlevering",
+    "OpleidingOnderdeel", "Bekostigingscode", "IndicatieSectorLG",
+    "IndicatieBaMa", "IndicatieAcademischZiekenhuis",
+    "IndicatieGraadTeltVoorBekostigingsloopbaan", "DuitseDeelstaat",
+    "IndicatieWoonplaatsVereiste", "IndicatieNationaliteitsvoorwaardeSF",
+    "IndicatieGBARelatie",
+]
+date_fields = ["DatumDiploma", "DatumEersteAanlevering"]
+bool_fields = [
+    "Bekostigingsindicatie", "EersteGraad", "IndicatieSectorLG",
+    "IndicatieAcademischZiekenhuis", "IndicatieGraadTeltVoorBekostigingsloopbaan",
+    "IndicatieWoonplaatsVereiste", "IndicatieNationaliteitsvoorwaardeSF",
+    "IndicatieGBARelatie",
+]
+int_fields = ["Bekostigingsjaar"]
+float_fields = ["JointDegreeFactor"]
+required_fields = [
+    "Recordsoort", "Bekostigingsjaar", "BRIN", "Bekostigingsindicatie",
+    "CodeBekostigingstatus", "JointDegreeFactor", "Opleidingscode",
+    "Opleidingsniveau", "Opleidingsfase", "EersteGraad",
+    "IndicatieGraadTeltVoorBekostigingsloopbaan",
+    "IndicatieNationaliteitsvoorwaardeSF",
+]
+
+[HRR.codelijsten]
+CodeBekostigingstatus = "bekostigingstatus"
+Bekostigingsniveau    = "bekostigingsniveau"
+Opleidingsniveau      = "opleidingsniveau"
+Opleidingsfase        = "opleidingsfase"
+Onderwijsvorm         = "onderwijsvorm"
+OpleidingOnderdeel    = "opleidingonderdeel"
+Bekostigingscode      = "bekostigingscode"
+IndicatieBaMa         = "indicatiebama"
+
+[SLR]
+single_row      = true
+fields          = ["Recordsoort", "AantalHRDrecords", "AantalHRRrecords"]
+int_fields      = ["AantalHRDrecords", "AantalHRRrecords"]
+required_fields = ["Recordsoort", "AantalHRDrecords", "AantalHRRrecords"]
