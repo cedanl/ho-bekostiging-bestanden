@@ -2,18 +2,25 @@
 
 Gebruik:
     ho verwerk <source> <target> [--fmt parquet|csv]
+    ho star <map...> --output <map>
 """
 
 import argparse
 from pathlib import Path
 
-from ho_bekostiging_bestanden.pipeline import run_pipeline
+from ho_bekostiging_bestanden.pipeline import run_pipeline, run_star
 
 
 def _verwerk(args: argparse.Namespace) -> None:
     frames = run_pipeline(args.source, args.target, fmt=args.fmt)
     total = sum(df.height for df in frames.values())
     print(f"Verwerkt: {len(frames)} tabellen, {total} rijen → {args.target}")
+
+
+def _star(args: argparse.Namespace) -> None:
+    star = run_star(args.sources, args.output)
+    total = sum(df.height for df in star.values())
+    print(f"Star schema gebouwd: {len(star)} tabellen, {total} rijen → {args.output}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,6 +40,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Uitvoerformaat (standaard: parquet)",
     )
     p_verwerk.set_defaults(func=_verwerk)
+
+    p_star = sub.add_parser("star", help="Bouw star schema vanuit prepared-mappen")
+    p_star.add_argument(
+        "sources",
+        nargs="+",
+        type=Path,
+        help="Mappen met Parquet-bestanden (één per levering)",
+    )
+    p_star.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="Doelmap; het star schema komt in <output>/datamodel/",
+    )
+    p_star.set_defaults(func=_star)
 
     return parser
 

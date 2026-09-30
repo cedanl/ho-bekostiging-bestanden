@@ -42,6 +42,8 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Deprecations (o.a. Polars) direct zichtbaar maken als fout.
+filterwarnings = ["error::DeprecationWarning"]
 
 [tool.ty.environment]
 python-version = "3.13"

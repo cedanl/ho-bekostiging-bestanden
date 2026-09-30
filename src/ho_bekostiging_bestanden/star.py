@@ -207,7 +207,9 @@ def _dim_instelling(
         brins.drop_nulls()
         .unique()
         .sort("BRIN")
-        .with_columns(pl.col("BRIN").is_in(ontvangers).alias("EigenInstelling"))
+        .with_columns(
+            pl.col("BRIN").is_in(ontvangers.implode()).alias("EigenInstelling")
+        )
     )
 
 
@@ -236,7 +238,7 @@ def _dim_status(fact_status: pl.DataFrame) -> pl.DataFrame:
     onbekend = (
         fact_status.select("Code")
         .unique()
-        .filter(~pl.col("Code").is_in(codelijst["Code"]))
+        .filter(~pl.col("Code").is_in(codelijst["Code"].implode()))
         .with_columns(
             *[pl.lit(v).alias(k) for k, v in ONBEKENDE_STATUS.items()],
             pl.lit(False).alias("Bekostigd"),
