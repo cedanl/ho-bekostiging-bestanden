@@ -30,7 +30,7 @@ def _overzicht(bestanden: list[Path]) -> pl.DataFrame:
                 "Bestand": info.bestandsnaam,
                 "Soort": info.soort,
                 "Bekostigingsjaar": info.bekostigingsjaar,
-                "Aangemaakt": info.datum_aanmaak,
+                "Aangemaakt": info.datum_aanmaak.isoformat(),
                 "BRIN": info.brin,
             }
         )
