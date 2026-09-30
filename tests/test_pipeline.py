@@ -135,3 +135,20 @@ def test_alleen_warnings_is_warn(tmp_path):
     schrijf_bestand(raw, "VLPBEK_2024_20240115_99XX.csv", analyse_regels())
     resultaat = verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
     assert resultaat.status == STATUS_WARN
+
+
+def test_star_contractbreuk_is_fail(tmp_path, vlpbek_bestand, monkeypatch):
+    from ho_bekostiging_bestanden import contracten
+
+    prep = tmp_path / "prep" / "lev"
+    run_pipeline(vlpbek_bestand, prep)
+    # Eén contract dat altijd één error oplevert.
+    altijd_fout = contracten.Controle(
+        "Test", "error", lambda star: iter([("dim_levering", "x", 1)])
+    )
+    monkeypatch.setattr(contracten, "CONTROLES", (altijd_fout,))
+    with pytest.raises(KwaliteitsFout):
+        run_star([prep], tmp_path / "out")
+    rapport = _rapport(tmp_path / "out")
+    assert rapport["star"]["status"] == STATUS_FAIL
+    assert rapport["leveringen"][0]["status"] == STATUS_OK

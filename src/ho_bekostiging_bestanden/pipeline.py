@@ -7,6 +7,7 @@ from typing import get_args
 
 import polars as pl
 
+from ho_bekostiging_bestanden import contracten
 from ho_bekostiging_bestanden.decode import decode_frames
 from ho_bekostiging_bestanden.export import OutputFormat, export_frames
 from ho_bekostiging_bestanden.ingest import (
@@ -26,6 +27,7 @@ from ho_bekostiging_bestanden.kwaliteit import (
     MELDING_SCHEMA,
     QUALITY_JSON,
     RAPPORT_SCHEMA,
+    STAR_BRON,
     STATUS_OK,
     bouw_rapport,
     melding,
@@ -193,8 +195,8 @@ def _leveringmeldingen(
 
 
 def _star_meldingen(star: dict[str, pl.DataFrame]) -> pl.DataFrame:
-    """Meldingen over het star schema zelf; Task 3 (#20) vult dit."""
-    return pl.DataFrame(schema=RAPPORT_SCHEMA)
+    """Meldingen van de star-contracten (``contracten.py``)."""
+    return met_bron(contracten.controleer_star(star), STAR_BRON)
 
 
 def _bouw_star(
