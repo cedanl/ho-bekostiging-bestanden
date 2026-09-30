@@ -51,4 +51,7 @@ ho-bekostiging-bestanden/
   Bron: PvE HO-instelling – DUO v26.3.1, bijlagen 8 en 10.
 - **Output**: Parquet in `data/02-prepared/` en star schema in `data/03-output/`.
 - Echte data is gitignored; alleen synthetische demo-data in `data/01-raw/demo/`.
-- Privacy: geen persoonsgegevens committen.
+- Privacy: geen persoonsgegevens committen. BSN en onderwijsnummer worden direct
+  na het inlezen gepseudonimiseerd, identiek aan 1cijferho (`pseudonimisering.py`,
+  sleutel `EENCIJFERHO_ENCRYPT_KEY`); wijzig het algoritme nooit zonder 1cijferho
+  mee te nemen, anders breekt de koppeling met 1CHO.

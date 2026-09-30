@@ -61,3 +61,41 @@ def test_resultaten_na_verwerking(app_config):
     at = _pagina("resultaten").run()
     assert not at.exception
     assert at.selectbox(key="resultaten_tabel").options[0] in STAR_TABELLEN
+
+
+def _config_met(tmp_path, monkeypatch, extra: str = "") -> None:
+    config = tmp_path / "config.toml"
+    config.write_text(
+        "[data]\n"
+        f'raw = "{DEMO_RAW.as_posix()}"\n'
+        f'prepared = "{(tmp_path / "prep").as_posix()}"\n'
+        f'output = "{(tmp_path / "out").as_posix()}"\n' + extra
+    )
+    monkeypatch.setenv(CONFIG_ENV, str(config))
+
+
+def test_home_zonder_sleutel_legt_uit_en_verwerkt_niet(tmp_path, monkeypatch):
+    _config_met(tmp_path, monkeypatch)
+    monkeypatch.delenv("EENCIJFERHO_ENCRYPT_KEY")
+    at = _pagina("home").run()
+    assert not at.exception
+    assert any("EENCIJFERHO_ENCRYPT_KEY" in e.value for e in at.error)
+    assert at.button(key="verwerk_alles").disabled
+
+
+def test_home_met_demo_sleutel_waarschuwt(tmp_path, monkeypatch):
+    demo = "demo-" + "d" * 70
+    _config_met(tmp_path, monkeypatch, f'\n[security]\ndemo_sleutel = "{demo}"\n')
+    monkeypatch.delenv("EENCIJFERHO_ENCRYPT_KEY")
+    at = _pagina("home").run()
+    assert any("demo-sleutel" in w.value.lower() for w in at.warning)
+    at.button(key="verwerk_alles").click().run()
+    assert not at.exception
+    assert (tmp_path / "out" / "datamodel" / "dim_persoon.parquet").exists()
+
+
+def test_standaardconfig_heeft_demo_sleutel_van_voldoende_lengte():
+    import tomllib
+
+    config = tomllib.loads((APP / "config.toml").read_text(encoding="utf-8"))
+    assert len(config["security"]["demo_sleutel"].encode()) >= 64

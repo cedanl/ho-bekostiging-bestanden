@@ -30,10 +30,12 @@ TABEL_DOCS: dict[str, dict[str, str]] = {
     "dim_persoon": {
         "titel": "Personen",
         "wat": (
-            "Eén regel per student, met BSN en/of onderwijsnummer en de datums "
-            "waarop een eerste AD-, bachelor- of mastergraad is behaald. De "
-            "sleutel `_persoon_id` is het BSN, of het onderwijsnummer als er "
-            "geen BSN is."
+            "Eén regel per student, met gepseudonimiseerd BSN en/of "
+            "onderwijsnummer en de datums waarop een eerste AD-, bachelor- of "
+            "mastergraad is behaald. De pseudoniemen zijn gelijk aan die van "
+            "1cijferho (met dezelfde sleutel), zodat je op `Burgerservicenummer` "
+            "met 1CHO kunt koppelen. `_persoon_id` is het BSN-pseudoniem, of dat "
+            "van het onderwijsnummer als er geen BSN is."
         ),
         "bron": "BLB-records (loopbaan) en de persoonsnummers in BRD/BRR/HRD/HRR.",
     },

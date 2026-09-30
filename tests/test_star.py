@@ -4,6 +4,7 @@ import polars as pl
 import pytest
 
 from ho_bekostiging_bestanden.pipeline import run_pipeline
+from ho_bekostiging_bestanden.pseudonimisering import laad_sleutel, pseudoniem
 from ho_bekostiging_bestanden.stack import stack_prepared
 from ho_bekostiging_bestanden.star import FEIT_ID, PERSOON_ID, STAR_TABELLEN, build_star
 
@@ -80,7 +81,8 @@ def test_fact_deelname_bevat_brd_en_hrd(star):
 
 
 def test_persoon_zonder_bsn_krijgt_onderwijsnummer(star):
-    assert "800010002" in star["dim_persoon"][PERSOON_ID].to_list()
+    onr = pseudoniem(laad_sleutel(), "800010002")
+    assert onr in star["dim_persoon"][PERSOON_ID].to_list()
 
 
 def test_meervoudige_status_wordt_gesplitst(star):
@@ -95,7 +97,8 @@ def test_eigen_instelling(star):
 
 
 def test_graaddatum_in_dim_persoon(star):
-    persoon = star["dim_persoon"].filter(pl.col(PERSOON_ID) == "700010001")
+    bsn = pseudoniem(laad_sleutel(), "700010001")
+    persoon = star["dim_persoon"].filter(pl.col(PERSOON_ID) == bsn)
     assert persoon["DatumGraadBehaaldBa"][0] == date(2023, 6, 25)
 
 

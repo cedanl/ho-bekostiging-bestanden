@@ -10,10 +10,12 @@ import sys
 from pathlib import Path
 
 from ho_bekostiging_bestanden.pipeline import run_pipeline, run_star
+from ho_bekostiging_bestanden.pseudonimisering import SLEUTEL_ENV, laad_sleutel
 
 
 def _verwerk(args: argparse.Namespace) -> None:
-    frames = run_pipeline(args.source, args.target, fmt=args.fmt)
+    sleutel = laad_sleutel(sleutelbestand=args.sleutelbestand)
+    frames = run_pipeline(args.source, args.target, fmt=args.fmt, sleutel=sleutel)
     total = sum(df.height for df in frames.values())
     print(f"Verwerkt: {len(frames)} tabellen, {total} rijen -> {args.target}")
 
@@ -39,6 +41,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="parquet",
         choices=["parquet", "csv"],
         help="Uitvoerformaat (standaard: parquet)",
+    )
+    p_verwerk.add_argument(
+        "--sleutelbestand",
+        type=Path,
+        default=None,
+        help=f"Bestand met de pseudonimiseringssleutel (standaard: ${SLEUTEL_ENV})",
     )
     p_verwerk.set_defaults(func=_verwerk)
 

@@ -8,7 +8,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from _huisstijl import hero
-from _utils import output_dir, prepared_dir, raw_dir
+from _utils import output_dir, prepared_dir, pseudonimiseringssleutel, raw_dir
 
 from ho_bekostiging_bestanden.ingest import parse_bestandsnaam
 from ho_bekostiging_bestanden.pipeline import (
@@ -19,6 +19,11 @@ from ho_bekostiging_bestanden.pipeline import (
 )
 
 UPLOAD_MAP = "upload"
+DEMO_SLEUTEL_MELDING = (
+    "Demo-sleutel actief (uit `app/config.toml`): alleen geschikt voor de "
+    "synthetische demo-data. Voor echte data en koppeling met 1CHO zet je "
+    "`EENCIJFERHO_ENCRYPT_KEY` op dezelfde sleutel als in 1cijferho."
+)
 
 
 def _overzicht(bestanden: list[Path]) -> pl.DataFrame:
@@ -87,9 +92,22 @@ if not bestanden:
 st.subheader(f"{len(bestanden)} bestand(en) gevonden")
 st.dataframe(_overzicht(bestanden), hide_index=True, width="stretch")
 
-if st.button("Verwerk alles", type="primary", key="verwerk_alles"):
+sleutelstatus = pseudonimiseringssleutel()
+if sleutelstatus.fout:
+    st.error(f"Verwerken kan nog niet: {sleutelstatus.fout}")
+elif sleutelstatus.is_demo:
+    st.warning(DEMO_SLEUTEL_MELDING)
+
+if st.button(
+    "Verwerk alles",
+    type="primary",
+    key="verwerk_alles",
+    disabled=sleutelstatus.sleutel is None,
+):
     with st.spinner("Bezig met verwerken…"):
-        resultaat = verwerk_alles(raw, prepared_dir(), output_dir())
+        resultaat = verwerk_alles(
+            raw, prepared_dir(), output_dir(), sleutel=sleutelstatus.sleutel
+        )
     for naam, fout in resultaat.fouten.items():
         st.error(f"**{naam}** kon niet worden verwerkt: {fout}")
     for naam, rapport in resultaat.validatie.items():

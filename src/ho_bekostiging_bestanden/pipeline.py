@@ -20,6 +20,10 @@ from ho_bekostiging_bestanden.ingest import (
     read_multi_record_csv,
 )
 from ho_bekostiging_bestanden.metadata import schema_meta
+from ho_bekostiging_bestanden.pseudonimisering import (
+    laad_sleutel,
+    pseudonimiseer_frames,
+)
 from ho_bekostiging_bestanden.stack import stack_prepared
 from ho_bekostiging_bestanden.star import build_star
 from ho_bekostiging_bestanden.validate import VOORLOOP, valideer
@@ -84,6 +88,7 @@ def run_pipeline(
     source: str | Path,
     target: str | Path,
     fmt: OutputFormat = "parquet",
+    sleutel: bytes | None = None,
 ) -> dict[str, pl.DataFrame]:
     """Verwerk één ruw analysebestand of HISBEK-bestand naar ``target``.
 
@@ -91,14 +96,19 @@ def run_pipeline(
         source: Pad naar het ruwe bestand (``VLPBEK_…``, ``DEFBEK_…``, ``HISBEK_…``).
         target: Doelmap voor de prepared-tabellen.
         fmt:    ``"parquet"`` (standaard) of ``"csv"``.
+        sleutel: Pseudonimiseringssleutel; standaard uit ``EENCIJFERHO_ENCRYPT_KEY``.
+                 BSN en onderwijsnummer worden direct na het decoderen
+                 gepseudonimiseerd, gelijk aan 1cijferho.
 
     Returns:
         Dict van tabelnaam naar DataFrame: de recordsoorten plus ``LEVERING``
         en ``VALIDATIE``.
 
     Raises:
-        ValueError: Als de bestandsnaam niet herkend wordt of de VLP ontbreekt.
+        ValueError: Als de bestandsnaam niet herkend wordt, de VLP ontbreekt of
+                    er geen (geldige) pseudonimiseringssleutel is.
     """
+    sleutel = sleutel if sleutel is not None else laad_sleutel()
     info = parse_bestandsnaam(source)
     if info is None:
         raise ValueError(
@@ -108,6 +118,7 @@ def run_pipeline(
         )
     schema_name = SCHEMA_PER_LEVERING[info.soort]
     frames = decode_frames(read_multi_record_csv(source, schema_name), schema_name)
+    frames = pseudonimiseer_frames(frames, sleutel)
     rapport = valideer(frames, schema_name, info)
     uitvoer = {rs: df for rs, df in frames.items() if rs != MELDINGEN}
     uitvoer[LEVERING] = _levering_tabel(info, frames[VOORLOOP], schema_name)
@@ -166,7 +177,9 @@ def onherkende_bestanden(raw: Path) -> list[Path]:
     ]
 
 
-def verwerk_alles(raw: Path, prepared: Path, output: Path) -> Verwerking:
+def verwerk_alles(
+    raw: Path, prepared: Path, output: Path, sleutel: bytes | None = None
+) -> Verwerking:
     """Verwerk alle herkende bestanden in ``raw`` en bouw het star schema.
 
     Een bestand dat niet verwerkt kan worden (bijv. zonder VLP) of dat dubbel
@@ -176,25 +189,28 @@ def verwerk_alles(raw: Path, prepared: Path, output: Path) -> Verwerking:
         raw:      Map met ruwe bestanden.
         prepared: Map voor de prepared-tabellen (één submap per bestand).
         output:   Map voor het star schema.
+        sleutel:  Pseudonimiseringssleutel; standaard uit ``EENCIJFERHO_ENCRYPT_KEY``.
 
     Returns:
         :class:`Verwerking` met prepared-mappen, star schema, validatie en fouten.
     """
+    # Eén keer laden: zonder geldige sleutel wordt niets verwerkt (ValueError).
+    sleutel = sleutel if sleutel is not None else laad_sleutel()
     resultaat = Verwerking()
     gezien: dict[str, Path] = {}
     for bestand in vind_bestanden(raw):
-        sleutel = bestand.stem.upper()
-        if sleutel in gezien:
+        stam = bestand.stem.upper()
+        if stam in gezien:
             # Zelfde levering twee keer (bijv. ook geüpload): één keer tellen.
-            eerste = gezien[sleutel].relative_to(raw)
+            eerste = gezien[stam].relative_to(raw)
             resultaat.fouten[str(bestand.relative_to(raw))] = DUBBEL_MELDING.format(
                 eerste=eerste
             )
             continue
-        gezien[sleutel] = bestand
+        gezien[stam] = bestand
         doel = Path(prepared) / bestand.stem
         try:
-            frames = run_pipeline(bestand, doel)
+            frames = run_pipeline(bestand, doel, sleutel=sleutel)
         except ValueError as fout:
             resultaat.fouten[bestand.name] = str(fout)
             continue

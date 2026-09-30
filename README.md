@@ -50,6 +50,35 @@ De app gebruikt de Npuls-huisstijl uit de skill `vormgever-npuls-huisstijl` in
 `app/_huisstijl.py`, en het Streamlit-thema in `.streamlit/config.toml` wordt in de
 tests tegen de tokens gecontroleerd.
 
+## Pseudonimisering en koppelen met 1CHO
+
+Het BSN en het onderwijsnummer worden direct na het inlezen gepseudonimiseerd, met
+precies hetzelfde algoritme als [1cijferho](https://github.com/cedanl/1cijferho)
+(`pseudonymize_value`: HMAC-SHA256 met de sleutel uit `EENCIJFERHO_ENCRYPT_KEY`,
+minimaal 64 bytes). In de prepared- en star-tabellen staat daardoor geen leesbaar
+BSN meer.
+
+Gebruik je in beide tools **dezelfde sleutel**, dan geeft een student in beide
+hetzelfde pseudoniem. Je koppelt dan het gepseudonimiseerde 1CHO-bestand aan
+`dim_persoon` op de kolom `Burgerservicenummer`, en via `_persoon_id` door naar de
+feittabellen:
+
+```python
+import polars as pl
+
+ev = pl.read_csv("EV…csv", separator=";", infer_schema_length=0)  # na 1cijferho
+persoon = pl.read_parquet("data/03-output/…/datamodel/dim_persoon.parquet")
+gekoppeld = ev.join(persoon, on="Burgerservicenummer", how="inner")
+```
+
+- Zonder sleutel verwerkt de CLI niets (`ho verwerk … --sleutelbestand <pad>` kan ook).
+- De demo-app gebruikt een openbare demo-sleutel uit `app/config.toml` en waarschuwt
+  daarvoor. Zet voor echte data altijd `EENCIJFERHO_ENCRYPT_KEY`; die gaat voor.
+- Het BSN wordt gepseudonimiseerd zoals het in het bestand staat (9 tekens, met
+  voorloopnul), net als in 1cijferho.
+- Iemand zonder BSN (alleen een onderwijsnummer) koppelt alleen als 1CHO
+  hetzelfde onderwijsnummer heeft (kolom `Onderwijsnummer`).
+
 ## Eigen data
 
 Zet je bestanden in een eigen map (bijvoorbeeld `data/01-raw/eigen/`; alles buiten
