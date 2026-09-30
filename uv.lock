@@ -204,6 +204,7 @@ name = "ho-bekostiging-bestanden"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "altair" },
     { name = "polars" },
     { name = "streamlit" },
 ]
@@ -217,8 +218,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "altair", specifier = ">=5.4" },
     { name = "polars", specifier = ">=1.0" },
-    { name = "streamlit", specifier = ">=1.40" },
+    { name = "streamlit", specifier = ">=1.50" },
 ]
 
 [package.metadata.requires-dev]

@@ -29,7 +29,8 @@ def stack_prepared(
 
     Raises:
         FileNotFoundError: Als een map niet bestaat.
-        ValueError:        Als ``labels`` een andere lengte heeft dan ``sources``.
+        ValueError:        Als ``labels`` een andere lengte heeft dan ``sources``,
+                           of als een map geen Parquet-bestanden bevat.
     """
     paths = [Path(s) for s in sources]
     if not paths:
@@ -41,6 +42,11 @@ def stack_prepared(
     for p in paths:
         if not p.exists():
             raise FileNotFoundError(f"Bronmap niet gevonden: {p}")
+        if not any(p.glob("*.parquet")):
+            raise ValueError(
+                f"Geen Parquet-bestanden in {p}. Het star schema leest alleen "
+                "Parquet; verwerk het bestand zonder --fmt csv."
+            )
 
     labels = labels or [p.name for p in paths]
     tables: dict[str, list[pl.DataFrame]] = {}

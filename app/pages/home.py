@@ -13,6 +13,7 @@ from _utils import output_dir, prepared_dir, raw_dir
 from ho_bekostiging_bestanden.ingest import parse_bestandsnaam
 from ho_bekostiging_bestanden.pipeline import (
     detect_levering,
+    onherkende_bestanden,
     verwerk_alles,
     vind_bestanden,
 )
@@ -67,6 +68,15 @@ raw = raw_dir()
 _bewaar_uploads(raw)
 bestanden = vind_bestanden(raw)
 
+onherkend = onherkende_bestanden(raw)
+if onherkend:
+    namen = "\n".join(f"- `{p.relative_to(raw)}`" for p in onherkend)
+    st.warning(
+        f"{len(onherkend)} CSV-bestand(en) niet herkend en overgeslagen. Verwacht "
+        "een naam als `VLPBEK_2025_20240115_99XX.csv` (ook DEFBEK of HISBEK):"
+        f"\n{namen}"
+    )
+
 if not bestanden:
     st.info(
         f"Geen herkenbare bestanden gevonden in `{raw}`. Zet VLPBEK-, DEFBEK- of "
@@ -75,7 +85,7 @@ if not bestanden:
     st.stop()
 
 st.subheader(f"{len(bestanden)} bestand(en) gevonden")
-st.dataframe(_overzicht(bestanden), hide_index=True, use_container_width=True)
+st.dataframe(_overzicht(bestanden), hide_index=True, width="stretch")
 
 if st.button("Verwerk alles", type="primary", key="verwerk_alles"):
     with st.spinner("Bezig met verwerken…"):
@@ -85,7 +95,7 @@ if st.button("Verwerk alles", type="primary", key="verwerk_alles"):
     for naam, rapport in resultaat.validatie.items():
         if not rapport.is_empty():
             with st.expander(f"⚠️ {naam}: {rapport.height} controle(s) met meldingen"):
-                st.dataframe(rapport, hide_index=True, use_container_width=True)
+                st.dataframe(rapport, hide_index=True, width="stretch")
     totaal = sum(df.height for df in resultaat.star.values())
     st.success(
         f"{len(resultaat.prepared_dirs)} bestand(en) verwerkt; star schema met "
@@ -94,8 +104,8 @@ if st.button("Verwerk alles", type="primary", key="verwerk_alles"):
 
 col_dash, col_res = st.columns(2)
 with col_dash:
-    if st.button("Naar het dashboard →", use_container_width=True):
+    if st.button("Naar het dashboard →", width="stretch"):
         st.switch_page("pages/dashboard.py")
 with col_res:
-    if st.button("Naar de resultaten →", use_container_width=True):
+    if st.button("Naar de resultaten →", width="stretch"):
         st.switch_page("pages/resultaten.py")

@@ -106,7 +106,7 @@ CLI-commando `ho`.
 | `stack.py` | Prepared-mappen stapelen met de kolommen `Levering`, `Bekostigingsjaar`, `DatumAanmaak`, `Bestandsnaam` |
 | `star.py` | Star schema bouwen (§6) |
 | `indicatoren.py` | Pure functies op het star schema voor het dashboard (trechter, redenen, per opleiding, voorlopig tegenover definitief, historie), net als `indicatoren.py` bij MBO |
-| `cli.py` | `ho verwerk <bestand> <doel>`, `ho star <mappen…> --doel <map>` |
+| `cli.py` | `ho verwerk <bestand> <doel>`, `ho star <mappen…> --output <map>` |
 
 Paden en drempelwaarden staan in `app/config.toml` en in constanten bovenaan
 de modules; er staan geen vaste waarden midden in de code.

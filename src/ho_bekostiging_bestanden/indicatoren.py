@@ -16,6 +16,8 @@ DEFINITIEF = "DEFBEK"
 HISTORISCH = "HISBEK"
 # Deelnames met status mv vallen buiten de beoordeling (PvE §17.5). [Te checken]
 BUITEN_BEOORDELING = "mv"
+# Tekst voor een ontbrekende waarde in een grafieklabel.
+ONBEKEND = "onbekend"
 TRECHTER_STAPPEN = ("In bestand", "Beoordeeld", "Bekostigd")
 FEIT_BRON = {"fact_deelname": "deelname", "fact_resultaat": "resultaat"}
 DEELNAME_SLEUTEL = ["Bekostigingsjaar", "BRIN", "Inschrijvingvolgnummer", PERSOON_ID]
@@ -34,6 +36,17 @@ _VERSCHIL_SCHEMA = {
 }
 
 
+def label(sjabloon: str, *kolommen: str) -> pl.Expr:
+    """Grafieklabel uit kolommen; een ontbrekende waarde wordt ``ONBEKEND``.
+
+    ``pl.format`` geeft anders ``null`` zodra één kolom leeg is, en dan
+    vallen verschillende balken samen.
+    """
+    return pl.format(
+        sjabloon, *[pl.col(k).cast(pl.Utf8).fill_null(ONBEKEND) for k in kolommen]
+    ).alias("label")
+
+
 def heeft_soort(star: dict[str, pl.DataFrame], soort: str) -> bool:
     """Is er minstens één levering van deze soort (VLPBEK/DEFBEK/HISBEK)?"""
     return soort in star["dim_levering"]["SoortLevering"].to_list()
@@ -44,7 +57,7 @@ def actuele_leveringen(star: dict[str, pl.DataFrame], soort: str) -> list[str]:
     return (
         star["dim_levering"]
         .filter(pl.col("SoortLevering") == soort)
-        .sort("DatumAanmaak", descending=True)
+        .sort("DatumAanmaak", descending=True, nulls_last=True)
         .unique("Bekostigingsjaar", keep="first")
         .sort("Bekostigingsjaar")[LABEL_COL]
         .to_list()
@@ -181,12 +194,15 @@ def voorlopig_vs_definitief(star: dict[str, pl.DataFrame]) -> pl.DataFrame:
 
 
 def historie(star: dict[str, pl.DataFrame]) -> pl.DataFrame:
-    """Per bekostigingsjaar en bron: totaal en bekostigd, uit de HISBEK-levering."""
+    """Per bekostigingsjaar en bron: totaal en bekostigd, uit de HISBEK-levering.
+
+    Net als de trechter telt dit alleen beoordeelde rijen (zonder status ``mv``).
+    """
     leveringen = actuele_leveringen(star, HISTORISCH)
     delen = [
-        feiten(star, feit, leveringen).select(
-            "Bekostigingsjaar", pl.lit(bron).alias("Bron"), "Bekostigingsindicatie"
-        )
+        feiten(star, feit, leveringen)
+        .filter(pl.col("Beoordeeld"))
+        .select("Bekostigingsjaar", pl.lit(bron).alias("Bron"), "Bekostigingsindicatie")
         for feit, bron in FEIT_BRON.items()
     ]
     return (

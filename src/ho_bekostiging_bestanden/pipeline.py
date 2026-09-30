@@ -10,6 +10,7 @@ import polars as pl
 from ho_bekostiging_bestanden.decode import decode_frames
 from ho_bekostiging_bestanden.export import OutputFormat, export_frames
 from ho_bekostiging_bestanden.ingest import (
+    EXTENSIE,
     LEVERING,
     MELDINGEN,
     SCHEMA_PER_LEVERING,
@@ -29,6 +30,7 @@ __all__ = [
     "VALIDATIE",
     "Verwerking",
     "detect_levering",
+    "onherkende_bestanden",
     "run_pipeline",
     "run_star",
     "verwerk_alles",
@@ -149,6 +151,18 @@ def vind_bestanden(raw: Path) -> list[Path]:
         p
         for p in sorted(Path(raw).rglob("*"))
         if p.is_file() and detect_levering(p) is not None
+    ]
+
+
+def onherkende_bestanden(raw: Path) -> list[Path]:
+    """CSV-bestanden onder ``raw`` die niet als levering herkend worden.
+
+    Bijvoorbeeld ``… (1).csv`` na een dubbele download, of een ``_OUD``-bestand.
+    """
+    return [
+        p
+        for p in sorted(Path(raw).rglob("*"))
+        if p.is_file() and p.suffix.lower() == EXTENSIE and detect_levering(p) is None
     ]
 
 

@@ -6,6 +6,7 @@ Gebruik:
 """
 
 import argparse
+import sys
 from pathlib import Path
 
 from ho_bekostiging_bestanden.pipeline import run_pipeline, run_star
@@ -61,4 +62,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except (ValueError, FileNotFoundError) as fout:
+        # Verwachte gebruikersfouten: nette melding, geen traceback.
+        print(f"Fout: {fout}", file=sys.stderr)
+        sys.exit(1)

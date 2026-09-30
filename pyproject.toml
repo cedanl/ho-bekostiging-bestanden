@@ -7,8 +7,9 @@ requires-python = ">=3.13"
 license = { text = "MIT" }
 authors = [{ name = "CEDA", email = "ceda@cedanl.org" }]
 dependencies = [
+    "altair>=5.4",
     "polars>=1.0",
-    "streamlit>=1.40",
+    "streamlit>=1.50",  # width="stretch" en theme.chartCategoricalColors
 ]
 
 [project.scripts]

@@ -12,16 +12,19 @@ from _utils import datamodel_dir
 
 from ho_bekostiging_bestanden.star import STAR_TABELLEN
 
+# Eén versie per tabel in het geheugen; oude versies (vorige verwerking) vallen weg.
+CACHE_TABELLEN = len(STAR_TABELLEN)
+
 VOORBEELD_RIJEN = 1_000
 
 
-@st.cache_resource(show_spinner=False)
+@st.cache_resource(show_spinner=False, max_entries=CACHE_TABELLEN)
 def _lees_tabel(pad: str, mtime: float) -> pl.DataFrame:
     """Houdt een gelezen Parquet-tabel in het geheugen tussen reruns."""
     return pl.read_parquet(pad)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=CACHE_TABELLEN)
 def _tabel_csv(pad: str, mtime: float) -> str:
     """Maakt de CSV-tekst één keer per bestand in plaats van bij elke rerun."""
     return _lees_tabel(pad, mtime).write_csv()
@@ -54,7 +57,7 @@ if gekozen:
     col_rijen.metric("Rijen", f"{df.height:,}")
     col_kolommen.metric("Kolommen", f"{df.width:,}")
 
-    st.dataframe(df.head(VOORBEELD_RIJEN), use_container_width=True, hide_index=True)
+    st.dataframe(df.head(VOORBEELD_RIJEN), width="stretch", hide_index=True)
     if df.height > VOORBEELD_RIJEN:
         st.caption(f"Eerste {VOORBEELD_RIJEN:,} van {df.height:,} rijen getoond.")
 
@@ -63,5 +66,5 @@ if gekozen:
         data=_tabel_csv(str(pad), mtime),
         file_name=f"{gekozen}.csv",
         mime="text/csv",
-        use_container_width=True,
+        width="stretch",
     )

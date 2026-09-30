@@ -108,7 +108,9 @@ h1, h2, h3 {{ font-family: var(--npuls-font-primary); font-weight: 600; }}
   opacity: 0.9;
 }}
 /* Rand om het rondje van een keuzeknop: tegen de licht-blauwe zijbalk is een
-   lege keuzeknop anders onzichtbaar. */
+   lege keuzeknop anders onzichtbaar. LET OP: deze selector leunt op de interne
+   DOM van Streamlit (1.64) en kan na een update stil ophouden met werken;
+   controleer na een Streamlit-upgrade de zijbalk van het dashboard. */
 [data-testid="stRadioOption"] > div > div:first-child {{
   box-shadow: inset 0 0 0 1.5px var(--npuls-blauw);
 }}

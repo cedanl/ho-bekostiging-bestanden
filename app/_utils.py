@@ -11,6 +11,9 @@ from ho_bekostiging_bestanden.star import STAR_TABELLEN
 
 CONFIG_ENV = "HO_APP_CONFIG"
 _STANDAARD_CONFIG = Path(__file__).parent / "config.toml"
+# Relatieve datapaden gaan uit van de repo-map, niet van de map waarin je
+# `streamlit run` start.
+REPO_ROOT = Path(__file__).parents[1]
 
 
 def load_config() -> dict:
@@ -19,16 +22,21 @@ def load_config() -> dict:
         return tomllib.load(f)
 
 
+def _datapad(sleutel: str) -> Path:
+    pad = Path(load_config()["data"][sleutel])
+    return pad if pad.is_absolute() else REPO_ROOT / pad
+
+
 def raw_dir() -> Path:
-    return Path(load_config()["data"]["raw"])
+    return _datapad("raw")
 
 
 def prepared_dir() -> Path:
-    return Path(load_config()["data"]["prepared"])
+    return _datapad("prepared")
 
 
 def output_dir() -> Path:
-    return Path(load_config()["data"]["output"])
+    return _datapad("output")
 
 
 def datamodel_dir() -> Path:

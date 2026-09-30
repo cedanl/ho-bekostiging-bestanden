@@ -56,8 +56,17 @@ Zet je bestanden in een eigen map (bijvoorbeeld `data/01-raw/eigen/`; alles buit
 `demo/` wordt door git genegeerd) en wijs de app ernaar met een eigen `config.toml`:
 
 ```bash
+# bash / macOS / Linux
 HO_APP_CONFIG=pad/naar/config.toml uv run streamlit run app/main.py
 ```
+
+```powershell
+# Windows PowerShell
+$env:HO_APP_CONFIG = "pad\naar\config.toml"; uv run streamlit run app/main.py
+```
+
+Relatieve paden in `config.toml` gaan uit van de repo-map, dus de app werkt ook
+als je hem vanuit een andere map start.
 
 Welke bestanden je hebt, maakt niet uit: het werkt met elke combinatie van VLPBEK,
 DEFBEK en HISBEK, ook zonder HISBEK.
@@ -71,6 +80,12 @@ uv run ho verwerk data/01-raw/demo/VLPBEK_2025_20240115_99XX.csv \
 
 # Bouw het star schema vanuit een of meer prepared-mappen
 uv run ho star data/02-prepared/demo/* --output data/03-output/demo
+```
+
+In Windows PowerShell werkt `*` niet als argument; geef de mappen dan zo mee:
+
+```powershell
+uv run ho star (Get-ChildItem data/02-prepared/demo -Directory).FullName --output data/03-output/demo
 ```
 
 ## Datamodel

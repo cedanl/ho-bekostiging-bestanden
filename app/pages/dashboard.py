@@ -13,6 +13,7 @@ from _chart_docs import chart_help
 from _utils import datamodel_dir, lees_star
 
 from ho_bekostiging_bestanden import indicatoren as ind
+from ho_bekostiging_bestanden.stack import LABEL_COL
 
 LEVERING_LABELS = {
     ind.DEFINITIEF: "Definitief (DEFBEK)",
@@ -27,7 +28,9 @@ GETAL_FORMAAT = ",d"
 LABEL_BREEDTE = 360  # max. pixels voor een as-label voordat het wordt afgekapt
 
 
-@st.cache_data(show_spinner=False)
+# cache_resource: de tabellen worden alleen gelezen, niet gekopieerd per rerun;
+# max_entries=1 omdat er steeds maar één actueel star schema is.
+@st.cache_resource(show_spinner=False, max_entries=1)
 def _star(pad: str, mtime: float) -> dict[str, pl.DataFrame] | None:
     return lees_star(Path(pad))
 
@@ -64,7 +67,7 @@ def _hbar(
         )
         .properties(height=alt.Step(BALK_HOOGTE))
     )
-    st.altair_chart(grafiek, use_container_width=True)
+    st.altair_chart(grafiek, width="stretch")
 
 
 def _tab_trechter(deelnames: pl.DataFrame, resultaten: pl.DataFrame) -> None:
@@ -84,7 +87,7 @@ def _tab_redenen(deelnames: pl.DataFrame, star: dict[str, pl.DataFrame]) -> None
         st.info("Alle beoordeelde deelnames in deze selectie zijn bekostigd.")
         return
     _hbar(redenen, "Omschrijving", "Aantal")
-    st.dataframe(redenen, hide_index=True, use_container_width=True)
+    st.dataframe(redenen, hide_index=True, width="stretch")
 
 
 def _tab_opleiding(deelnames: pl.DataFrame) -> None:
@@ -94,10 +97,10 @@ def _tab_opleiding(deelnames: pl.DataFrame) -> None:
         st.info("Geen beoordeelde deelnames in deze selectie.")
         return
     per_opl = per_opl.with_columns(
-        pl.format("{} ({})", "Opleidingscode", "Opleidingsniveau").alias("Opleiding")
+        ind.label("{} ({})", "Opleidingscode", "Opleidingsniveau").alias("Opleiding")
     ).sort("AandeelBekostigd")
     _hbar(per_opl, "Opleiding", "AandeelBekostigd", formaat=".0%")
-    st.dataframe(per_opl.drop("Opleiding"), hide_index=True, use_container_width=True)
+    st.dataframe(per_opl.drop("Opleiding"), hide_index=True, width="stretch")
 
 
 def _tab_voorlopig_definitief(star: dict[str, pl.DataFrame]) -> None:
@@ -113,12 +116,12 @@ def _tab_voorlopig_definitief(star: dict[str, pl.DataFrame]) -> None:
         st.info("Geen statuswijzigingen tussen voorlopig en definitief.")
         return
     verschil = verschil.with_columns(
-        pl.format("{}: {} → {}", "Bekostigingsjaar", "Voorlopig", "Definitief").alias(
+        ind.label("{}: {} → {}", "Bekostigingsjaar", "Voorlopig", "Definitief").alias(
             "Wijziging"
         )
     )
     _hbar(verschil, "Wijziging", "Aantal")
-    st.dataframe(verschil.drop("Wijziging"), hide_index=True, use_container_width=True)
+    st.dataframe(verschil.drop("Wijziging"), hide_index=True, width="stretch")
 
 
 def _tab_historie(star: dict[str, pl.DataFrame]) -> None:
@@ -159,8 +162,8 @@ def _tab_historie(star: dict[str, pl.DataFrame]) -> None:
             ],
         )
     )
-    st.altair_chart(grafiek, use_container_width=True)
-    st.dataframe(hist, hide_index=True, use_container_width=True)
+    st.altair_chart(grafiek, width="stretch")
+    st.dataframe(hist, hide_index=True, width="stretch")
 
 
 st.title("Dashboard")
@@ -179,8 +182,8 @@ if soorten:
     leveringen = ind.actuele_leveringen(star, soort)
     jaar_per_levering = dict(
         star["dim_levering"]
-        .filter(pl.col("levering").is_in(leveringen))
-        .select("Bekostigingsjaar", "levering")
+        .filter(pl.col(LABEL_COL).is_in(leveringen))
+        .select("Bekostigingsjaar", LABEL_COL)
         .rows()
     )
     jaar = st.sidebar.selectbox(

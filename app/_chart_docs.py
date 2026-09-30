@@ -87,8 +87,9 @@ CHART_DOCS: dict[str, dict] = {
             "Bekostigingsindicatie",
         ],
         "manipulatie": (
-            "Uit het HISBEK-bestand: per bekostigingsjaar het aantal deelnames en "
-            "graden van de eigen instelling en hoeveel daarvan bekostigd zijn."
+            "Uit het HISBEK-bestand: per bekostigingsjaar het aantal beoordeelde "
+            "deelnames en graden van de eigen instelling (zonder status `mv`, net "
+            "als in de trechter) en hoeveel daarvan bekostigd zijn."
         ),
         "kanttekening": "Alleen zichtbaar als er een HISBEK-bestand is verwerkt.",
     },
