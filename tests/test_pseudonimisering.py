@@ -42,7 +42,7 @@ def test_lege_waarde_blijft_leeg(waarde):
 def test_sleutel_uit_omgeving_bestand_en_te_kort(tmp_path, monkeypatch):
     assert laad_sleutel() == TEST_SLEUTEL.encode()  # autouse-fixture zet de env-var
     bestand = tmp_path / "sleutel.txt"
-    bestand.write_text(TEST_SLEUTEL + "\n")
+    bestand.write_text(TEST_SLEUTEL + "\n", encoding="utf-8")
     assert laad_sleutel(sleutelbestand=bestand) == TEST_SLEUTEL.encode()
     with pytest.raises(ValueError, match="te kort"):
         laad_sleutel("kort")
@@ -91,7 +91,7 @@ def test_cli_zonder_sleutel_nette_fout(tmp_path, vlpbek_bestand, monkeypatch, ca
 def test_cli_met_sleutelbestand(tmp_path, vlpbek_bestand, monkeypatch):
     monkeypatch.delenv(SLEUTEL_ENV)
     bestand = tmp_path / "sleutel.txt"
-    bestand.write_text(TEST_SLEUTEL)
+    bestand.write_text(TEST_SLEUTEL, encoding="utf-8")
     doel = tmp_path / "prep"
     monkeypatch.setattr(
         sys,

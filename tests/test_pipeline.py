@@ -48,6 +48,6 @@ def test_run_pipeline_csv(tmp_path, vlpbek_bestand):
 
 def test_onbekend_bestand(tmp_path):
     pad = tmp_path / "RO_27DV_20240731_20260324.csv"
-    pad.write_text("VLP|x")
+    pad.write_text("VLP|x", encoding="utf-8")
     with pytest.raises(ValueError, match="Onbekend bestandstype"):
         run_pipeline(pad, tmp_path / "prep")

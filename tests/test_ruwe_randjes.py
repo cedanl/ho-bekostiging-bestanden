@@ -70,7 +70,7 @@ def test_onherkende_csv_bestanden_worden_gevonden(tmp_path):
     raw = tmp_path / "raw"
     schrijf_bestand(raw, "VLPBEK_2025_20240115_99XX.csv", analyse_regels())
     schrijf_bestand(raw, "VLPBEK_2025_20240115_99XX (1).csv", analyse_regels())
-    (raw / "notities.txt").write_text("geen csv")
+    (raw / "notities.txt").write_text("geen csv", encoding="utf-8")
     assert [p.name for p in onherkende_bestanden(raw)] == [
         "VLPBEK_2025_20240115_99XX (1).csv"
     ]
@@ -78,7 +78,7 @@ def test_onherkende_csv_bestanden_worden_gevonden(tmp_path):
 
 def test_cli_toont_nette_fout_zonder_traceback(tmp_path, monkeypatch, capsys):
     onbekend = tmp_path / "RO_27DV_20240731_20260324.csv"
-    onbekend.write_text("VLP|x")
+    onbekend.write_text("VLP|x", encoding="utf-8")
     monkeypatch.setattr(sys, "argv", ["ho", "verwerk", str(onbekend), str(tmp_path)])
     with pytest.raises(SystemExit) as uitkomst:
         main()
@@ -91,7 +91,8 @@ def test_cli_toont_nette_fout_zonder_traceback(tmp_path, monkeypatch, capsys):
 def test_relatieve_configpaden_gaan_uit_van_de_repo(tmp_path, monkeypatch):
     config = tmp_path / "config.toml"
     config.write_text(
-        '[data]\nraw = "data/01-raw/demo"\nprepared = "p"\noutput = "o"\n'
+        '[data]\nraw = "data/01-raw/demo"\nprepared = "p"\noutput = "o"\n',
+        encoding="utf-8",
     )
     monkeypatch.setenv(_utils.CONFIG_ENV, str(config))
     monkeypatch.chdir(tmp_path)
@@ -102,14 +103,16 @@ def test_relatieve_configpaden_gaan_uit_van_de_repo(tmp_path, monkeypatch):
 def test_geen_verouderde_use_container_width_in_app():
     bestanden = [*APP.glob("*.py"), *APP.glob("pages/*.py")]
     assert [
-        p.name for p in bestanden if "use_container_width" in p.read_text("utf-8")
+        p.name
+        for p in bestanden
+        if "use_container_width" in p.read_text(encoding="utf-8")
     ] == []
 
 
 def test_altair_is_directe_dependency():
     import tomllib
 
-    deps = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"][
-        "dependencies"
-    ]
+    deps = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]["dependencies"]
     assert any(d.startswith("altair") for d in deps)

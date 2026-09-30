@@ -98,7 +98,7 @@ def test_latin1_bestand_is_leesbaar(tmp_path):
 
 def test_leeg_bestand_geeft_fout(tmp_path):
     pad = tmp_path / "VLPBEK_2025_20240115_99XX.csv"
-    pad.write_text("\r\n\r\n")
+    pad.write_text("\r\n\r\n", encoding="utf-8")
     with pytest.raises(ValueError, match="Leeg bestand"):
         read_multi_record_csv(pad, "analyse")
 

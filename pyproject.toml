@@ -39,7 +39,10 @@ target-version = "py313"
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "PLW1514"]
+# PLW1514 (unspecified-encoding) is een preview-regel; alleen die aanzetten.
+preview = true
+explicit-preview-rules = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

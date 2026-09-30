@@ -24,7 +24,8 @@ def app_config(tmp_path, monkeypatch):
         "[data]\n"
         f'raw = "{DEMO_RAW.as_posix()}"\n'
         f'prepared = "{(tmp_path / "prep").as_posix()}"\n'
-        f'output = "{(tmp_path / "out").as_posix()}"\n'
+        f'output = "{(tmp_path / "out").as_posix()}"\n',
+        encoding="utf-8",
     )
     monkeypatch.setenv(CONFIG_ENV, str(config))
     return tmp_path
@@ -69,7 +70,8 @@ def _config_met(tmp_path, monkeypatch, extra: str = "") -> None:
         "[data]\n"
         f'raw = "{DEMO_RAW.as_posix()}"\n'
         f'prepared = "{(tmp_path / "prep").as_posix()}"\n'
-        f'output = "{(tmp_path / "out").as_posix()}"\n' + extra
+        f'output = "{(tmp_path / "out").as_posix()}"\n' + extra,
+        encoding="utf-8",
     )
     monkeypatch.setenv(CONFIG_ENV, str(config))
 

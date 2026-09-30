@@ -50,7 +50,7 @@ def test_fout_bestand_stopt_de_rest_niet(tmp_path):
     schrijf_bestand(
         raw, "DEFBEK_2025_20240715_99XX.csv", analyse_regels()[1:]
     )  # geen VLP
-    (raw / "notities.txt").write_text("genegeerd")
+    (raw / "notities.txt").write_text("genegeerd", encoding="utf-8")
     resultaat = verwerk_alles(raw, tmp_path / "prep", tmp_path / "out")
     assert list(resultaat.fouten) == ["DEFBEK_2025_20240715_99XX.csv"]
     assert "VLP" in resultaat.fouten["DEFBEK_2025_20240715_99XX.csv"]
