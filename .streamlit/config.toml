@@ -4,3 +4,33 @@ port = 8501
 
 [browser]
 gatherUsageStats = false
+
+# Npuls-huisstijl. Waarden komen uit app/huisstijl/design-tokens.json;
+# tests/test_huisstijl.py controleert dat ze gelijk blijven.
+[theme]
+base = "light"
+primaryColor = "#3D68EC"                # npuls-blauw
+backgroundColor = "#FFFFFF"             # npuls-wit
+secondaryBackgroundColor = "#D6E2FD"    # licht-blauw
+textColor = "#000000"                   # npuls-zwart (alleen tekst)
+borderColor = "#DCDCE0"                 # grijs-200
+# Randen om widgets, zodat bijv. een lege keuzeknop zichtbaar blijft.
+showWidgetBorder = true
+# Status: fout = oranje (Npuls gebruikt geen rood), waarschuwing = geel,
+# succes = groen, info = blauw.
+redColor = "#DD784B"
+orangeColor = "#DD784B"
+yellowColor = "#F4D74B"
+greenColor = "#00AF81"
+blueColor = "#3D68EC"
+linkColor = "#3D68EC"
+chartCategoricalColors = ["#3D68EC", "#DD784B", "#00AF81"]
+font = "Plus Jakarta Sans:https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600&display=swap, sans-serif"
+headingFontWeights = 600
+baseRadius = "large"
+buttonRadius = "full"
+
+[theme.sidebar]
+backgroundColor = "#D6E2FD"             # licht-blauw
+# Widgets in de zijbalk wit, anders verdwijnen ze tegen de licht-blauwe achtergrond.
+secondaryBackgroundColor = "#FFFFFF"    # npuls-wit

@@ -1,0 +1,176 @@
+{
+  "$schema": "npuls-design-tokens-v1",
+  "colors": {
+    "primary": {
+      "npuls-oranje": "#DD784B",
+      "npuls-zwart":  "#000000",
+      "npuls-roze":   "#F4D9DC",
+      "npuls-blauw":  "#3D68EC",
+      "npuls-geel":   "#F4D74B",
+      "npuls-groen":  "#00AF81",
+      "npuls-wit":    "#FFFFFF"
+    },
+    "secondary": {
+      "licht-groen":  "#CCEEE6",
+      "licht-blauw":  "#D6E2FD",
+      "licht-roze":   "#FAEAEA",
+      "licht-oranje": "#FFE4D8",
+      "licht-geel":   "#FCF5D4"
+    },
+    "rules": {
+      "min_primary_colors_per_design": 3,
+      "npuls-zwart_usage": "alleen voor typografie, nooit als achtergrondkleur",
+      "secondary_usage": "achtergronden of illustratie-details, ter ondersteuning van leesbaarheid"
+    },
+    "allowed_combinations": [
+      { "background": "npuls-blauw",  "with": ["npuls-geel", "npuls-roze"] },
+      { "background": "npuls-roze",   "with": ["npuls-blauw", "npuls-groen", "npuls-zwart", "npuls-oranje"] },
+      { "background": "npuls-geel",   "with": ["npuls-oranje", "npuls-zwart", "npuls-blauw"] },
+      { "background": "npuls-groen",  "with": ["npuls-roze", "npuls-zwart"] },
+      { "background": "npuls-oranje", "with": ["npuls-zwart", "npuls-roze"] },
+      { "background": "npuls-zwart",  "with": ["npuls-blauw", "npuls-oranje", "npuls-groen", "npuls-geel", "npuls-roze"] }
+    ],
+    "forbidden_examples": ["geel-op-groen", "groen-op-blauw"]
+  },
+  "typography": {
+    "primary_font": {
+      "name": "General Sans",
+      "digital_fallback": "Plus Jakarta Sans (Google Fonts)",
+      "weights": ["Regular (400)", "SemiBold (600)"]
+    },
+    "secondary_fonts": {
+      "cooper_light": { "usage": "introducties, ondertitels, quotes" },
+      "kansas_regular": { "usage": "projectasset, laden via @font-face", "license": "commercieel" }
+    },
+    "scale": {
+      "h1": { "size": "40-56px", "weight": "SemiBold" },
+      "h2": { "size": "28-36px", "weight": "SemiBold" },
+      "h3": { "size": "20-24px", "weight": "SemiBold" },
+      "body": { "size": "16px", "weight": "Regular" },
+      "label": { "size": "12-13px", "weight": "SemiBold", "transform": "uppercase", "letter_spacing": "0.08em" }
+    }
+  },
+  "icons": {
+    "library": "Font Awesome",
+    "style": "solid-sharp",
+    "cdn": true,
+    "cdn_url": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css",
+    "color_rule": "altijd een paletkleur + passende achtergrond, kleurparen afwisselen"
+  },
+  "shapes": {
+    "kernvormen": [
+      { "naam": "Pulse curve", "vorm": "golvende lijn", "betekenis": "dynamiek" },
+      { "naam": "Concentrische ringen", "vorm": "ringen rond middelpunt", "betekenis": "bron van impact, kenniscentrum" },
+      { "naam": "Chevron / pijl", "vorm": "punt/pijl", "betekenis": "richting, vooruitgang" },
+      { "naam": "Starburst", "vorm": "stervorm", "betekenis": "aandacht, nieuw" },
+      { "naam": "Boog / halfcirkel", "vorm": "boog", "betekenis": "verbinding, overgang" }
+    ],
+    "usage_rule": "altijd in een paletkleur + passende achtergrond, ook inzetbaar als decoratief masker"
+  },
+  "photography": {
+    "keywords": ["Focus", "Innovatie", "Actief", "Kleurrijk"],
+    "sources": [
+      "https://www.flickr.com/groups/cczero/pool/",
+      "https://www.flickr.com/groups/publicdomain/pool/"
+    ],
+    "mask_with_kernvormen": true
+  },
+  "logo": {
+    "payoff_text": "Onderwijs bewegen.",
+    "payoff_font": "General Sans Semibold",
+    "payoff_placement": "altijd separaat van het logo, hoek vrij te kiezen",
+    "clearspace_rule": "minimaal zo groot als de letter 'N' rondom het logo",
+    "orientation_preference": "horizontaal, verticaal toegestaan bij kleine/vierkante ruimtes",
+    "icon_only_context": "favicon, app-icoon, andere zeer beperkte ruimtes",
+    "initiative_label": "optioneel label met paletkleur te koppelen aan events/initiatieven"
+  },
+  "license": {
+    "type": "CC BY-SA 4.0",
+    "logo_and_brand_marks_excluded": true,
+    "note": "aanpassingen aan logo's/merkidentiteitselementen alleen met expliciete toestemming"
+  },
+  "font_loading": {
+    "_comment": "General Sans staat niet op Google Fonts; laad Plus Jakarta Sans als digitale vervanger. Cooper Light alleen via @font-face of als projectasset.",
+    "google_fonts_import": "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');",
+    "primary_stack": "'General Sans', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    "secondary_stack": "'Cooper Light', 'Cooper Lt BT', Georgia, 'Times New Roman', serif"
+  },
+  "neutrals": {
+    "_comment": "Uitsluitend voor bodytekst, randen, subtiele scheidingslijnen en code-/tabelvlakken. Nooit als dominant achtergrondvlak — kleur blijft de persoonlijkheid van Npuls (zie colors.rules).",
+    "npuls-wit":  "#FFFFFF",
+    "grijs-50":   "#F7F7F8",
+    "grijs-100":  "#ECECEE",
+    "grijs-200":  "#DCDCE0",
+    "grijs-400":  "#9A9AA2",
+    "grijs-600":  "#5C5C66",
+    "grijs-800":  "#2B2B31"
+  },
+  "spacing": {
+    "_comment": "8px-grid; gebruik consistent voor padding, gaps en marges",
+    "xs": "4px", "sm": "8px", "md": "16px", "lg": "24px", "xl": "32px", "2xl": "48px", "3xl": "64px", "4xl": "96px"
+  },
+  "radii": {
+    "_comment": "Npuls is speels en rond — wees royaal met radius; 'pill' voor knoppen en labels",
+    "sm": "6px", "md": "12px", "lg": "20px", "xl": "32px", "pill": "9999px"
+  },
+  "shadows": {
+    "_comment": "Zacht en subtiel; Npuls leunt op kleur en vorm, niet op zware schaduw",
+    "sm": "0 1px 2px rgba(0,0,0,0.06)",
+    "md": "0 4px 12px rgba(0,0,0,0.08)",
+    "lg": "0 12px 32px rgba(0,0,0,0.12)"
+  },
+  "feedback_colors": {
+    "_comment": "Statuskleuren komen uit het primaire palet — geen los rood/groen buiten palet. Gebruik als tekst-/icoonkleur op een toegestane achtergrond (zie allowed_combinations). We vermijden rood: fouten zijn oranje.",
+    "succes": "npuls-groen",
+    "info": "npuls-blauw",
+    "waarschuwing": "npuls-geel",
+    "fout": "npuls-oranje"
+  },
+  "data_visualization": {
+    "_comment": "Voor grafieken en dashboards. Categorische reeksen in deze volgorde; nooit rood-groen als enige onderscheid; achtergrond wit of een secondary pastel, nooit npuls-zwart.",
+    "categorical_order": ["npuls-blauw", "npuls-oranje", "npuls-groen", "npuls-geel", "npuls-roze", "npuls-zwart"],
+    "sequential": ["licht-blauw", "npuls-blauw"],
+    "diverging": ["npuls-oranje", "npuls-roze", "npuls-blauw"],
+    "grid_and_axis": "grijs-200 voor gridlijnen, npuls-zwart voor astekst en labels",
+    "chart_background": "npuls-wit of een secondary pastel"
+  },
+  "assets": {
+    "_comment": "Kant-en-klare SVG's in de skill. Kleuren volgen dit tokenbestand; gebruik ze vóór je nieuwe tekent.",
+    "shapes": "assets/shapes/  (pulse-curve, concentrische-ringen, chevron, starburst, boog)",
+    "logos": "assets/logos/  (beeldmerk.svg, beeldmerk-wit.svg — indicatief, vervang door het officiële bestand uit de communicatiekit)",
+    "illustrations": "assets/illustrations/  (collaboration, data-insight, learning — voorbeeld-illustraties in de vlakke Npuls-stijl)"
+  },
+  "css_variables": {
+    "_comment": "Kant-en-klaar startpunt voor werkwijze-stap 7 (volledig CSS-bestand met variabelen). Alle waarden komen 1-op-1 uit dit bestand.",
+    "--npuls-oranje": "#DD784B",
+    "--npuls-zwart": "#000000",
+    "--npuls-roze": "#F4D9DC",
+    "--npuls-blauw": "#3D68EC",
+    "--npuls-geel": "#F4D74B",
+    "--npuls-groen": "#00AF81",
+    "--npuls-wit": "#FFFFFF",
+    "--npuls-licht-groen": "#CCEEE6",
+    "--npuls-licht-blauw": "#D6E2FD",
+    "--npuls-licht-roze": "#FAEAEA",
+    "--npuls-licht-oranje": "#FFE4D8",
+    "--npuls-licht-geel": "#FCF5D4",
+    "--npuls-grijs-100": "#ECECEE",
+    "--npuls-grijs-200": "#DCDCE0",
+    "--npuls-grijs-600": "#5C5C66",
+    "--npuls-font-primary": "'General Sans', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    "--npuls-font-secondary": "'Cooper Light', 'Cooper Lt BT', Georgia, 'Times New Roman', serif",
+    "--npuls-space-xs": "4px",
+    "--npuls-space-sm": "8px",
+    "--npuls-space-md": "16px",
+    "--npuls-space-lg": "24px",
+    "--npuls-space-xl": "32px",
+    "--npuls-space-2xl": "48px",
+    "--npuls-radius-sm": "6px",
+    "--npuls-radius-md": "12px",
+    "--npuls-radius-lg": "20px",
+    "--npuls-radius-pill": "9999px",
+    "--npuls-shadow-sm": "0 1px 2px rgba(0,0,0,0.06)",
+    "--npuls-shadow-md": "0 4px 12px rgba(0,0,0,0.08)",
+    "--npuls-shadow-lg": "0 12px 32px rgba(0,0,0,0.12)"
+  }
+}

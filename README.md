@@ -42,6 +42,14 @@ heeft een toelichting.
 Kies een tabel uit het star schema, bekijk de eerste 1 000 rijen en download de hele
 tabel als CSV.
 
+## Huisstijl
+
+De app gebruikt de Npuls-huisstijl uit de skill `vormgever-npuls-huisstijl` in
+[cedanl/.github](https://github.com/cedanl/.github). De design tokens staan in
+`app/huisstijl/design-tokens.json`; kleuren, grafiekpalet en CSS komen uit
+`app/_huisstijl.py`, en het Streamlit-thema in `.streamlit/config.toml` wordt in de
+tests tegen de tokens gecontroleerd.
+
 ## Eigen data
 
 Zet je bestanden in een eigen map (bijvoorbeeld `data/01-raw/eigen/`; alles buiten

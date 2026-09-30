@@ -8,6 +8,7 @@ import polars as pl
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+import _huisstijl as hs
 from _chart_docs import chart_help
 from _utils import datamodel_dir, lees_star
 
@@ -17,8 +18,9 @@ LEVERING_LABELS = {
     ind.DEFINITIEF: "Definitief (DEFBEK)",
     ind.VOORLOPIG: "Voorlopig (VLPBEK)",
 }
-# Categorische kleur 1 uit het dataviz-referentiepalet; >= 3:1 op licht én donker.
-BALK_KLEUR = "#2a78d6"
+# Npuls-blauw: eerste kleur van het Npuls-grafiekpalet (design tokens).
+BALK_KLEUR = hs.grafiekpalet()[0]
+HISTORIE_REEKSEN = 2  # deelname en resultaat
 BALK_RONDING = 4  # px, afgeronde data-uiteinden
 BALK_HOOGTE = 28  # pixels per balk
 GETAL_FORMAAT = ",d"
@@ -38,7 +40,7 @@ def _hbar(
     df: pl.DataFrame, label: str, waarde: str, formaat: str = GETAL_FORMAAT
 ) -> None:
     """Horizontale balken in de volgorde van ``df``."""
-    grafiek = (
+    grafiek = hs.opmaak(
         alt.Chart(
             df,
             mark=alt.MarkDef(
@@ -129,27 +131,33 @@ def _tab_historie(star: dict[str, pl.DataFrame]) -> None:
     hist = ind.historie(star).with_columns(
         (pl.col("Bekostigd") / pl.col("Totaal")).alias("AandeelBekostigd")
     )
-    grafiek = alt.Chart(
-        hist, mark=alt.MarkDef(type="line", point=True, color=BALK_KLEUR)
-    ).encode(
-        x=alt.X(
-            "Bekostigingsjaar:O",
-            title="Bekostigingsjaar",
-            axis=alt.Axis(labelAngle=0),
-        ),
-        y=alt.Y(
-            "AandeelBekostigd:Q",
-            title="Aandeel bekostigd",
-            axis=alt.Axis(format=".0%"),
-        ),
-        strokeDash=alt.StrokeDash("Bron:N", title=None),
-        tooltip=[
-            "Bekostigingsjaar",
-            "Bron",
-            "Totaal",
-            "Bekostigd",
-            alt.Tooltip("AandeelBekostigd", format=".0%"),
-        ],
+    grafiek = hs.opmaak(
+        alt.Chart(hist, mark=alt.MarkDef(type="line", point=True)).encode(
+            x=alt.X(
+                "Bekostigingsjaar:O",
+                title="Bekostigingsjaar",
+                axis=alt.Axis(labelAngle=0),
+            ),
+            y=alt.Y(
+                "AandeelBekostigd:Q",
+                title="Aandeel bekostigd",
+                axis=alt.Axis(format=".0%"),
+            ),
+            # Kleur én streepjes: reeksen niet alleen op kleur te onderscheiden.
+            color=alt.Color(
+                "Bron:N",
+                title=None,
+                scale=alt.Scale(range=hs.grafiekpalet()[:HISTORIE_REEKSEN]),
+            ),
+            strokeDash=alt.StrokeDash("Bron:N", title=None),
+            tooltip=[
+                "Bekostigingsjaar",
+                "Bron",
+                "Totaal",
+                "Bekostigd",
+                alt.Tooltip("AandeelBekostigd", format=".0%"),
+            ],
+        )
     )
     st.altair_chart(grafiek, use_container_width=True)
     st.dataframe(hist, hide_index=True, use_container_width=True)
@@ -181,6 +189,7 @@ if soorten:
     niveaus = st.sidebar.multiselect(
         "Opleidingsniveau",
         sorted(star["dim_opleiding"]["Opleidingsniveau"].drop_nulls().unique()),
+        placeholder="Alle niveaus",
     )
     gekozen = [jaar_per_levering[jaar]]
     deelnames = ind.feiten(star, "fact_deelname", gekozen, niveaus)

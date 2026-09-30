@@ -7,6 +7,7 @@ import polars as pl
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+from _huisstijl import hero
 from _utils import output_dir, prepared_dir, raw_dir
 
 from ho_bekostiging_bestanden.ingest import parse_bestandsnaam
@@ -57,19 +58,9 @@ def _bewaar_uploads(raw: Path) -> None:
         st.toast(f"{upload.name} toegevoegd")
 
 
-st.markdown(
-    """<style>
-.hero { background: linear-gradient(135deg,#1a56db 0%,#0e3fa8 100%);
-        padding: 2rem 1.5rem; border-radius: 10px; color: white;
-        margin-bottom: 1.5rem; text-align: center; }
-.hero h1 { margin: 0 0 .4rem 0; font-size: 2rem; font-weight: 700; }
-.hero p  { margin: 0; opacity: .88; font-size: 1rem; }
-</style>
-<div class="hero">
-  <h1>HO-bekostigingsbestanden</h1>
-  <p>Zet DUO-analysebestanden (VLPBEK, DEFBEK, HISBEK) om naar een star schema.</p>
-</div>""",
-    unsafe_allow_html=True,
+hero(
+    "HO-bekostigingsbestanden",
+    "Zet DUO-analysebestanden (VLPBEK, DEFBEK, HISBEK) om naar een star schema.",
 )
 
 raw = raw_dir()
