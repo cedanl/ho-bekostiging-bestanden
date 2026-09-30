@@ -14,13 +14,13 @@ from ho_bekostiging_bestanden.pipeline import run_pipeline, run_star
 def _verwerk(args: argparse.Namespace) -> None:
     frames = run_pipeline(args.source, args.target, fmt=args.fmt)
     total = sum(df.height for df in frames.values())
-    print(f"Verwerkt: {len(frames)} tabellen, {total} rijen → {args.target}")
+    print(f"Verwerkt: {len(frames)} tabellen, {total} rijen -> {args.target}")
 
 
 def _star(args: argparse.Namespace) -> None:
     star = run_star(args.sources, args.output)
     total = sum(df.height for df in star.values())
-    print(f"Star schema gebouwd: {len(star)} tabellen, {total} rijen → {args.output}")
+    print(f"Star schema gebouwd: {len(star)} tabellen, {total} rijen -> {args.output}")
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -20,3 +20,14 @@ def test_cli_star(tmp_path, vlpbek_bestand, monkeypatch, capsys):
     main()
     assert "Star schema gebouwd: 9 tabellen" in capsys.readouterr().out
     assert (uit / "datamodel" / "fact_deelname.parquet").exists()
+
+
+def test_cli_werkt_op_windows_console(tmp_path, vlpbek_bestand, monkeypatch):
+    """Een cp1252-console (standaard Windows) mag niet crashen op de uitvoer."""
+    import io
+
+    uit = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", uit)
+    doel = tmp_path / "prep"
+    monkeypatch.setattr(sys, "argv", ["ho", "verwerk", str(vlpbek_bestand), str(doel)])
+    main()
