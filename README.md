@@ -16,11 +16,13 @@
     <a href="https://cedanl.github.io/ho-bekostiging-bestanden/"><strong>Lees de documentatie »</strong></a>
     <br />
     <br />
-    <a href="#demo">Demo</a>
-    &middot;
     <a href="https://github.com/cedanl/ho-bekostiging-bestanden/issues/new">Bug melden</a>
     &middot;
     <a href="https://github.com/cedanl/ho-bekostiging-bestanden/issues/new">Functie voorstellen</a>
+    <br />
+    Zie in ruim een minuut hoe de app werkt, met synthetische demo-data:
+
+https://github.com/user-attachments/assets/9e2d128d-70da-4689-acc9-d22efbaf1c94
   </p>
 </div>
 
@@ -91,12 +93,6 @@ Waarom dit nuttig is:
 Dit is de HO-tegenhanger van
 [mbo-bekostiging-bestanden](https://github.com/cedanl/mbo-bekostiging-bestanden).
 Doelgroep: analisten en onderzoekers bij HO-instellingen die met bekostigingsdata werken.
-
-### Demo
-
-Zie in ruim een minuut hoe de app werkt, met synthetische demo-data:
-
-https://github.com/user-attachments/assets/9e2d128d-70da-4689-acc9-d22efbaf1c94
 
 ### Gebouwd met
 
