@@ -18,6 +18,7 @@ Volg de CEDA technische standaarden: https://github.com/cedanl/.github/tree/main
 - **Geen Tactical Tornado** — geen quick-fixes die technische schuld opbouwen.
 - **Geen commit tenzij gevraagd** — implementeer lokaal en meld wat er gedaan is; wacht op een expliciete commit-opdracht van de gebruiker.
 - **Grafiektoelichtingen bijhouden** — bij elke aanpassing aan een grafiek in `app/pages/dashboard.py`: werk `app/_chart_docs.py` bij. Een grafiek zonder toelichting is niet af.
+- **Documentatie bijhouden** — wijzig je een schema (`metadata/*.toml`), codelijst of star-tabel: werk de pagina's in `docs/` bij. `tests/test_docs.py` faalt als ze uit de pas lopen.
 - **Werkwijze** — nieuwe features via de superpowers-flow: spec (`docs/superpowers/specs/`) → plan (`docs/superpowers/plans/`) → TDD.
 
 ## Tech Stack
@@ -33,9 +34,11 @@ ho-bekostiging-bestanden/
 ├── scripts/genereer_demo.py   # Maakt de demo-bestanden (vaste seed)
 ├── src/ho_bekostiging_bestanden/
 │   ├── ingest.py  decode.py  validate.py  export.py
-│   ├── pipeline.py  stack.py  star.py  indicatoren.py  cli.py  demo.py
+│   ├── pipeline.py  stack.py  star.py  contracten.py  kwaliteit.py
+│   ├── indicatoren.py  pseudonimisering.py  cli.py  demo.py
 │   └── metadata/              # Veldindelingen (TOML) en codelijsten (CSV)
 ├── app/                       # Streamlit (geen bedrijfslogica)
+├── docs/                      # MkDocs-documentatie (zie mkdocs.yml)
 └── tests/
 ```
 
@@ -43,6 +46,7 @@ ho-bekostiging-bestanden/
 - Dependencies: `uv sync`
 - Tests: `uv run pytest`
 - App: `uv run streamlit run app/main.py`
+- Docs: `uv sync --group docs` en `uv run mkdocs serve` (CI bouwt met `--strict`)
 - CLI: `uv run ho verwerk <bestand> <doelmap>` en `uv run ho star <mappen…> --output <map>`
 
 ## Data

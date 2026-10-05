@@ -1,0 +1,4 @@
+/* Veldnamen in tabellen niet midden in een woord afbreken. */
+.md-typeset table:not([class]) td code {
+  white-space: nowrap;
+}

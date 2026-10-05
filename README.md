@@ -13,7 +13,7 @@
   <p align="center">
     Leest DUO HO-bekostigingsbestanden in en zet ze om naar schone, onderzoeksklare data.
     <br />
-    <a href="#aan-de-slag"><strong>Direct aan de slag »</strong></a>
+    <a href="https://cedanl.github.io/ho-bekostiging-bestanden/"><strong>Lees de documentatie »</strong></a>
     <br />
     <br />
     <a href="#demo">Demo</a>
@@ -137,6 +137,9 @@ eigen bestanden nodig om het uit te proberen.
    ```
 
 Open daarna het adres dat Streamlit toont (standaard `http://localhost:8501`).
+
+Alles over de bestanden, het datamodel en de kwaliteitscontroles staat in de
+[documentatie](https://cedanl.github.io/ho-bekostiging-bestanden/) (bron: [`docs/`](docs/index.md)).
 
 <p align="right">(<a href="#readme-top">terug naar boven</a>)</p>
 

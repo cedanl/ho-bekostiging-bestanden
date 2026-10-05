@@ -36,3 +36,6 @@ data/03-output/**
 
 # Superpowers-werkplek (ledger, briefs)
 .superpowers/
+
+# Gebouwde documentatiesite (mkdocs build)
+site/

@@ -1,0 +1,90 @@
+site_name: HO-bekostigingsbestanden
+site_description: Documentatie over de ruwe DUO HO-bekostigingsbestanden (VLPBEK, DEFBEK en HISBEK) – wat ze bevatten, hoe ze zijn opgebouwd en wat alle velden betekenen.
+site_url: https://cedanl.github.io/ho-bekostiging-bestanden/
+repo_url: https://github.com/cedanl/ho-bekostiging-bestanden
+repo_name: cedanl/ho-bekostiging-bestanden
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+# Planning en ontwerpstukken van de ontwikkelaars horen niet in de site.
+exclude_docs: |
+  superpowers/
+  demo/
+
+extra_css:
+  - stylesheets/extra.css
+
+theme:
+  name: material
+  language: nl
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Donker thema
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Licht thema
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search:
+      lang: nl
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Aan de slag: aan-de-slag.md
+  - Datamodel: datamodel.md
+  - Dashboard: dashboard.md
+  - Kwaliteit: kwaliteit.md
+  - Ontwerpkeuzes: ontwerpkeuzes.md
+  - Architectuur: architectuur.md
+  - Databestanden:
+    - databestanden/index.md
+    - Analysebestand (VLPBEK en DEFBEK): databestanden/analysebestand.md
+    - Historisch bestand (HISBEK): databestanden/hisbek.md
+  - Recordtypes:
+    - recordtypes/index.md
+    - VLP – Voorlooprecord: recordtypes/vlp.md
+    - BLB – Bekostigingsloopbaan student: recordtypes/blb.md
+    - BRD – Bekostigingsresultaat deelname: recordtypes/brd.md
+    - BRR – Bekostigingsresultaat resultaat: recordtypes/brr.md
+    - HRD – Historisch resultaat deelname: recordtypes/hrd.md
+    - HRR – Historisch resultaat resultaat: recordtypes/hrr.md
+    - SLR – Sluitrecord: recordtypes/slr.md
+  - Waardenlijsten: waardenlijsten.md
+  - PvE-versies: pve-wijzigingen.md
