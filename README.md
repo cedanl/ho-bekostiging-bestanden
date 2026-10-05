@@ -16,6 +16,13 @@ Dit is de MBO-tegenhanger van
 
 Doelgroep: analisten en onderzoekers bij HO-instellingen die met bekostigingsdata werken.
 
+## Demo
+
+Zie in ruim een minuut hoe de app werkt: bestanden verwerken, het dashboard en de
+resultaten. De video gebruikt de synthetische demo-data.
+
+▶ [Bekijk de demo-video](docs/demo/ho-bekostiging-demo.mp4)
+
 ## Quick start
 
 ```bash
