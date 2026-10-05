@@ -1,0 +1,101 @@
+name: Release
+
+# Gelijk aan mbo-bekostiging-bestanden. Een release ontstaat alleen door een
+# v*-tag te pushen, en alleen als:
+# - de tag-commit op main staat,
+# - de tag gelijk is aan de versie in pyproject.toml,
+# - CI én Docs op main voor precies die commit groen zijn.
+# De release-notes komen uit release-notes/<versie>.md als dat bestand bestaat
+# (eerste regel "# ..." is de titel), anders uit de gemergde PR's sinds de
+# vorige tag. In beide gevallen pas gepubliceerd als elke #NNN erin bestaat en
+# elk issue dat een PR in de notes sluit, ook echt gesloten is
+# (scripts/controleer_release_notes.py).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  # Hoe lang de gate wacht tot de main-runs van deze commit zichtbaar zijn.
+  RUN_ZOEK_POGINGEN: 30
+  RUN_ZOEK_INTERVAL_S: 10
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag staat op main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME ($GITHUB_SHA) staat niet op main. Merge eerst naar main en tag daarna."
+            exit 1
+          fi
+
+      - name: Tag volgt pyproject-versie
+        run: |
+          versie=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          if [ "$GITHUB_REF_NAME" != "v$versie" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME wijkt af van pyproject.toml (v$versie)."
+            exit 1
+          fi
+
+      - name: CI en Docs groen op deze commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for workflow in ci.yml docs.yml; do
+            run_id=""
+            for _ in $(seq "$RUN_ZOEK_POGINGEN"); do
+              run_id=$(gh run list --workflow "$workflow" --branch main --event push \
+                --commit "$GITHUB_SHA" --limit 1 --json databaseId -q '.[0].databaseId')
+              [ -n "$run_id" ] && break
+              sleep "$RUN_ZOEK_INTERVAL_S"
+            done
+            if [ -z "$run_id" ]; then
+              echo "::error::Geen $workflow-run op main gevonden voor $GITHUB_SHA."
+              exit 1
+            fi
+            gh run watch "$run_id" --exit-status
+          done
+
+      - name: Release-notes samenstellen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bestand="release-notes/$GITHUB_REF_NAME.md"
+          if [ -f "$bestand" ]; then
+            echo "Notes uit $bestand."
+            if head -n1 "$bestand" | grep -q '^# '; then
+              # Eerste regel "# ..." levert de release-titel, de rest is de body.
+              printf 'RELEASE_TITLE=%s\n' "$(head -n1 "$bestand" | sed 's/^# //')" >> "$GITHUB_ENV"
+              tail -n +2 "$bestand" > release-notes.md
+            else
+              printf 'RELEASE_TITLE=%s\n' "$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+              cp "$bestand" release-notes.md
+            fi
+          else
+            echo "Geen $bestand; notes gegenereerd uit de gemergde PR's."
+            printf 'RELEASE_TITLE=%s\n' "$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+            gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+              -f tag_name="$GITHUB_REF_NAME" --jq .body > release-notes.md
+          fi
+
+      - name: Verwijzingen in de notes kloppen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/controleer_release_notes.py release-notes.md "$GITHUB_REPOSITORY"
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag \
+            --notes-file release-notes.md --title "$RELEASE_TITLE"

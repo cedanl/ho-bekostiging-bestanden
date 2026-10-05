@@ -288,7 +288,9 @@ Heb je een idee? Open een issue, of maak een pull request:
 
 Nieuwe features gaan via spec (`docs/superpowers/specs/`) → plan
 (`docs/superpowers/plans/`) → tests eerst. Technische context voor
-(LLM-)bijdragers staat in [`CLAUDE.md`](CLAUDE.md).
+(LLM-)bijdragers staat in [`CLAUDE.md`](CLAUDE.md). Een release ontstaat alleen
+door een tag `vX.Y.Z` op `main`; de workflow `release.yml` controleert versie, CI en
+Docs, en publiceert de notes uit `release-notes/` (zie `CLAUDE.md`).
 
 ```bash
 uv run pytest            # tests

@@ -49,6 +49,29 @@ ho-bekostiging-bestanden/
 - Docs: `uv sync --group docs` en `uv run mkdocs serve` (CI bouwt met `--strict`)
 - CLI: `uv run ho verwerk <bestand> <doelmap>` en `uv run ho star <mappen…> --output <map>`
 
+## Releases
+Alleen via een tag op `main`; `.github/workflows/release.yml` is de gate
+(gelijk aan mbo-bekostiging-bestanden).
+1. PR die `version` in `pyproject.toml` ophoogt en `release-notes/vX.Y.Z.md`
+   toevoegt → merge naar `main`.
+2. Wacht tot CI en Docs op `main` groen zijn.
+3. `git fetch && git tag vX.Y.Z origin/main && git push origin vX.Y.Z`.
+
+De workflow controleert dat de tag op `main` staat, gelijk is aan de
+pyproject-versie en dat CI én Docs voor die commit groen zijn, en maakt dan de
+GitHub Release. Notes komen uit `release-notes/<tag>.md` (eerste regel
+`# Titel` wordt de release-titel, de rest de body) en anders uit de gemergde
+PR's. In beide gevallen faalt de gate als een `#NNN` in de notes niet bestaat,
+of als een issue dat een PR in de notes sluit nog openstaat
+(`scripts/controleer_release_notes.py`).
+**Nooit** zelf `gh release create` draaien of release-notes buiten de gate om
+publiceren — dat omzeilt de controle.
+
+Een gepubliceerde release is een historisch feit. Een correctie komt als
+**toevoeging met datum** bovenaan; de oorspronkelijke tekst blijft staan
+(ingeklapt in `<details>`). Een inhoudelijke correctie hoort in de volgende
+release ("Supersedes vX.Y.Z").
+
 ## Data
 - **Input**: DUO-analysebestanden `VLPBEK_JJJJ_EEJJMMDD_99XX.CSV`, `DEFBEK_…`, `HISBEK_…`.
   Multi-record, `|`-gescheiden (VLP/BLB/BRD/BRR/SLR, resp. VLP/HRD/HRR/SLR).
