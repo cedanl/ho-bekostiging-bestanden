@@ -22,7 +22,8 @@
     <br />
     Zie in ruim een minuut hoe de app werkt, met synthetische demo-data:
 
-https://github.com/user-attachments/assets/9e2d128d-70da-4689-acc9-d22efbaf1c94
+https://github.com/user-attachments/assets/fda94817-cdbb-479a-a798-8ff066f2e6bc
+
   </p>
 </div>
 
