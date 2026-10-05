@@ -21,7 +21,11 @@ Doelgroep: analisten en onderzoekers bij HO-instellingen die met bekostigingsdat
 Zie in ruim een minuut hoe de app werkt: bestanden verwerken, het dashboard en de
 resultaten. De video gebruikt de synthetische demo-data.
 
-▶ [Bekijk de demo-video](docs/demo/ho-bekostiging-demo.mp4)
+
+
+https://github.com/user-attachments/assets/5e639123-613a-499b-ae2f-862a5fd063da
+
+
 
 ## Quick start
 
