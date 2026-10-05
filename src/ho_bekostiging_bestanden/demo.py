@@ -10,7 +10,13 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+from ho_bekostiging_bestanden.ingest import (
+    SCHEMA_PER_LEVERING,
+    SEPARATOR,
+    parse_bestandsnaam,
+)
 from ho_bekostiging_bestanden.metadata import load_schema
+from ho_bekostiging_bestanden.validate import VOORLOOP
 
 SEED = 42
 DOEL = Path("data/01-raw/demo")
@@ -86,7 +92,7 @@ def maak_regel(schema_naam: str, rs: str, **waarden: str) -> str:
     onbekend = set(waarden) - set(velden)
     if onbekend:
         raise KeyError(f"Onbekende velden voor {rs}: {sorted(onbekend)}")
-    return "|".join(
+    return SEPARATOR.join(
         rs if veld == "Recordsoort" else waarden.get(veld, "") for veld in velden
     )
 
@@ -94,7 +100,9 @@ def maak_regel(schema_naam: str, rs: str, **waarden: str) -> str:
 def schrijf_bestand(map_: Path, naam: str, regels: list[str]) -> Path:
     """Schrijf regels met CRLF, opgevuld tot minstens ``PAD_TOT`` velden."""
     map_.mkdir(parents=True, exist_ok=True)
-    opgevuld = [r + "|" * max(PAD_TOT - 1 - r.count("|"), 0) for r in regels]
+    opgevuld = [
+        r + SEPARATOR * max(PAD_TOT - 1 - r.count(SEPARATOR), 0) for r in regels
+    ]
     pad = map_ / naam
     pad.write_bytes(("\r\n".join(opgevuld) + "\r\n").encode("utf-8"))
     return pad
@@ -241,7 +249,7 @@ def _analysebestand(
     regels = [
         maak_regel(
             "analyse",
-            "VLP",
+            VOORLOOP,
             BRIN=BRIN_EIGEN,
             Bekostigingsjaar=str(jaar),
             DatumAanmaak=_d(aanmaak),
@@ -278,7 +286,7 @@ def _woonplaatsvereiste(jaar: int, voldoet: bool) -> str:
 
 
 def _hisbek(rng: random.Random, personen: list[_Persoon], aanmaak: date) -> list[str]:
-    regels = [maak_regel("hisbek", "VLP", BRIN=BRIN_EIGEN, DatumAanmaak=_d(aanmaak))]
+    regels = [maak_regel("hisbek", VOORLOOP, BRIN=BRIN_EIGEN, DatumAanmaak=_d(aanmaak))]
     tel = {"HRD": 0, "HRR": 0}
     for p in personen:
         # (jaar, volgorde binnen het jaar, regel); de PvE sorteert per persoon
@@ -317,6 +325,29 @@ def _hisbek(rng: random.Random, personen: list[_Persoon], aanmaak: date) -> list
 
 def _naam(soort: str, jaar: int, aanmaak: date) -> str:
     return f"{soort}_{jaar}_{_d(aanmaak)}_{BRIN_EIGEN}.csv"
+
+
+def _vlp_brin(pad: Path, schema_naam: str) -> str | None:
+    """BRIN uit het voorlooprecord; alleen de eerste regel wordt gelezen."""
+    with pad.open(encoding="utf-8-sig", errors="replace") as f:
+        velden = f.readline().rstrip("\r\n").split(SEPARATOR)
+    vlp = load_schema(schema_naam)[VOORLOOP]["fields"]
+    if velden[0] != VOORLOOP or len(velden) <= vlp.index("BRIN"):
+        return None
+    return velden[vlp.index("BRIN")]
+
+
+def is_demo_bestand(pad: str | Path) -> bool:
+    """Is dit een synthetisch demo-bestand (BRIN ``BRIN_EIGEN`` in naam én VLP)?
+
+    De app pseudonimiseert alleen demo-data met de openbare demo-sleutel. De
+    VLP wordt ook gelezen, zodat een omgedoopt echt bestand niet doorglipt.
+    """
+    pad = Path(pad)
+    info = parse_bestandsnaam(pad)
+    if info is None or info.brin != BRIN_EIGEN:
+        return False
+    return _vlp_brin(pad, SCHEMA_PER_LEVERING[info.soort]) == BRIN_EIGEN
 
 
 def genereer_demo(doel: Path = DOEL) -> list[Path]:

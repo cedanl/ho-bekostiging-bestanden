@@ -41,7 +41,7 @@ from ho_bekostiging_bestanden.kwaliteit import (
     schrijf_rapport,
     status,
 )
-from ho_bekostiging_bestanden.metadata import schema_meta
+from ho_bekostiging_bestanden.metadata import load_schema, schema_meta
 from ho_bekostiging_bestanden.pseudonimisering import (
     laad_sleutel,
     pseudonimiseer_frames,
@@ -119,12 +119,24 @@ def _levering_tabel(
     )
 
 
+def _pipeline_tabellen() -> set[str]:
+    """Namen van alle tabellen die :func:`run_pipeline` kan schrijven."""
+    recordsoorten = {
+        rs for schema in SCHEMA_PER_LEVERING.values() for rs in load_schema(schema)
+    }
+    return recordsoorten | {LEVERING, VALIDATIE}
+
+
 def _maak_leeg(target: Path) -> None:
     """Verwijder eerder geëxporteerde tabellen, zodat een recordsoort die in de
-    nieuwe versie van het bestand ontbreekt niet blijft hangen."""
-    for fmt in get_args(OutputFormat):
-        for pad in target.glob(f"*.{fmt}"):
-            pad.unlink()
+    nieuwe versie van het bestand ontbreekt niet blijft hangen.
+
+    Alleen tabellen van de pipeline zelf: een doelmap kan ook bestanden van de
+    gebruiker bevatten, en die mogen nooit verdwijnen.
+    """
+    for naam in _pipeline_tabellen():
+        for fmt in get_args(OutputFormat):
+            (target / f"{naam}.{fmt}").unlink(missing_ok=True)
 
 
 def run_pipeline(

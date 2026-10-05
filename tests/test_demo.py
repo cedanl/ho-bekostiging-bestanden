@@ -1,7 +1,7 @@
 import polars as pl
 import pytest
 
-from ho_bekostiging_bestanden.demo import genereer_demo
+from ho_bekostiging_bestanden.demo import BRIN_EIGEN, genereer_demo, is_demo_bestand
 from ho_bekostiging_bestanden.ingest import read_multi_record_csv
 from ho_bekostiging_bestanden.kwaliteit import STATUS_OK
 from ho_bekostiging_bestanden.pipeline import verwerk_alles
@@ -14,6 +14,38 @@ VERWACHT = {
     "DEFBEK_2025_20240715_99XX.csv",
     "HISBEK_2024_20250301_99XX.csv",
 }
+
+
+ECHTE_BRIN = "21PL"
+
+
+def test_demo_bestanden_zijn_demo_data():
+    assert all(is_demo_bestand(DEMO_RAW / naam) for naam in VERWACHT)
+
+
+def test_andere_brin_in_bestandsnaam_is_geen_demo_data(tmp_path):
+    bron = DEMO_RAW / "VLPBEK_2025_20240115_99XX.csv"
+    pad = tmp_path / bron.name.replace(BRIN_EIGEN, ECHTE_BRIN)
+    pad.write_bytes(bron.read_bytes())
+    assert not is_demo_bestand(pad)
+
+
+def test_omgedoopt_echt_bestand_is_geen_demo_data(tmp_path):
+    """Een echte levering met een demo-naam: de BRIN in de VLP verraadt hem."""
+    bron = DEMO_RAW / "DEFBEK_2025_20240715_99XX.csv"
+    inhoud = bron.read_bytes().replace(
+        f"VLP|{BRIN_EIGEN}|".encode(), f"VLP|{ECHTE_BRIN}|".encode(), 1
+    )
+    pad = tmp_path / bron.name
+    pad.write_bytes(inhoud)
+    assert not is_demo_bestand(pad)
+
+
+@pytest.mark.parametrize("inhoud", [b"", b"BLB|1|2\r\n"])
+def test_bestand_zonder_vlp_vooraan_is_geen_demo_data(tmp_path, inhoud):
+    pad = tmp_path / "VLPBEK_2025_20240115_99XX.csv"
+    pad.write_bytes(inhoud)
+    assert not is_demo_bestand(pad)
 
 
 def test_generator_is_deterministisch(tmp_path):

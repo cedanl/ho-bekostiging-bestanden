@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -65,11 +66,11 @@ def test_resultaten_na_verwerking(app_config):
     assert at.selectbox(key="resultaten_tabel").options[0] in STAR_TABELLEN
 
 
-def _config_met(tmp_path, monkeypatch, extra: str = "") -> None:
+def _config_met(tmp_path, monkeypatch, extra: str = "", raw: Path = DEMO_RAW) -> None:
     config = tmp_path / "config.toml"
     config.write_text(
         "[data]\n"
-        f'raw = "{DEMO_RAW.as_posix()}"\n'
+        f'raw = "{raw.as_posix()}"\n'
         f'prepared = "{(tmp_path / "prep").as_posix()}"\n'
         f'output = "{(tmp_path / "out").as_posix()}"\n' + extra,
         encoding="utf-8",
@@ -95,6 +96,35 @@ def test_home_met_demo_sleutel_waarschuwt(tmp_path, monkeypatch):
     at.button(key="verwerk_alles").click().run()
     assert not at.exception
     assert (tmp_path / "out" / "datamodel" / "dim_persoon.parquet").exists()
+
+
+ECHT_BESTAND = "VLPBEK_2025_20240115_21PL.csv"
+
+
+def _demo_plus_echt_bestand(tmp_path, monkeypatch) -> None:
+    """Invoermap met de demo-bestanden en één echte levering, plus demo-sleutel."""
+    raw = tmp_path / "raw"
+    shutil.copytree(DEMO_RAW, raw)
+    schrijf_bestand(raw, ECHT_BESTAND, analyse_regels())
+    demo = "demo-" + "d" * 70
+    _config_met(tmp_path, monkeypatch, f'\n[security]\ndemo_sleutel = "{demo}"\n', raw)
+
+
+def test_demo_sleutel_weigert_echte_data(tmp_path, monkeypatch):
+    """De openbare demo-sleutel maakt een BSN terug te rekenen: nooit op echte data."""
+    _demo_plus_echt_bestand(tmp_path, monkeypatch)
+    monkeypatch.delenv("EENCIJFERHO_ENCRYPT_KEY")
+    at = _pagina("home").run()
+    assert not at.exception
+    assert any(ECHT_BESTAND in e.value for e in at.error)
+    assert at.button(key="verwerk_alles").disabled
+
+
+def test_eigen_sleutel_verwerkt_echte_data(tmp_path, monkeypatch):
+    _demo_plus_echt_bestand(tmp_path, monkeypatch)
+    at = _pagina("home").run()
+    assert not at.button(key="verwerk_alles").disabled
+    assert not any("demo-sleutel" in w.value.lower() for w in at.warning)
 
 
 def test_standaardconfig_heeft_demo_sleutel_van_voldoende_lengte():

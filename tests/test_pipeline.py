@@ -24,6 +24,28 @@ from ho_bekostiging_bestanden.pipeline import (
 from .conftest import analyse_regels, schrijf_bestand
 
 
+def test_eigen_bestanden_in_doelmap_blijven_staan(tmp_path, vlpbek_bestand):
+    """Een verkeerd gekozen doelmap mag geen bestanden van de gebruiker wissen."""
+    doel = tmp_path / "doel"
+    doel.mkdir()
+    eigen = [doel / "eigen.parquet", doel / "notities.csv"]
+    for pad in eigen:
+        pad.write_text("van de gebruiker", encoding="utf-8")
+    run_pipeline(vlpbek_bestand, doel)
+    assert all(pad.exists() for pad in eigen)
+
+
+def test_tabel_uit_eerdere_verwerking_wordt_opgeruimd(
+    tmp_path, vlpbek_bestand, hisbek_bestand
+):
+    """Een recordsoort die de nieuwe levering niet heeft, blijft niet hangen."""
+    doel = tmp_path / "doel"
+    run_pipeline(hisbek_bestand, doel)
+    run_pipeline(vlpbek_bestand, doel, fmt="csv")
+    assert not list(doel.glob("HRD.*"))
+    assert not list(doel.glob("*.parquet"))
+
+
 def test_detect_levering():
     assert detect_levering("x/DEFBEK_2025_20240715_99XX.CSV") == "DEFBEK"
     assert detect_levering("x/RO_27DV_20240731_20260324.csv") is None

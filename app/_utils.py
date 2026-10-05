@@ -8,6 +8,7 @@ from typing import NamedTuple
 import polars as pl
 import streamlit as st
 
+from ho_bekostiging_bestanden.demo import is_demo_bestand
 from ho_bekostiging_bestanden.kwaliteit import (
     QUALITY_JSON,
     STATUS_FAIL,
@@ -19,6 +20,11 @@ from ho_bekostiging_bestanden.pseudonimisering import SLEUTEL_ENV, laad_sleutel
 from ho_bekostiging_bestanden.star import STAR_TABELLEN
 
 CONFIG_ENV = "HO_APP_CONFIG"
+DEMO_SLEUTEL_WEIGERING = (
+    "De demo-sleutel is alleen voor de synthetische demo-data, en deze "
+    "bestanden zijn dat niet: {}. Zet de omgevingsvariabele "
+    f"`{SLEUTEL_ENV}` op dezelfde sleutel als in 1cijferho."
+)
 _STANDAARD_CONFIG = Path(__file__).parent / "config.toml"
 # Relatieve datapaden gaan uit van de repo-map, niet van de map waarin je
 # `streamlit run` start.
@@ -85,14 +91,21 @@ class Sleutelstatus(NamedTuple):
     fout: str | None
 
 
-def pseudonimiseringssleutel() -> Sleutelstatus:
+def pseudonimiseringssleutel(bestanden: list[Path]) -> Sleutelstatus:
     """Sleutel uit ``EENCIJFERHO_ENCRYPT_KEY``; anders de demo-sleutel uit de config.
 
-    De omgevingsvariabele gaat altijd voor, zodat echte data nooit met de
-    openbare demo-sleutel gepseudonimiseerd wordt als die variabele gezet is.
+    De omgevingsvariabele gaat altijd voor. De demo-sleutel is openbaar, dus
+    daarmee is een pseudoniem terug te rekenen naar het BSN: hij geldt alleen
+    als alle ``bestanden`` synthetische demo-data zijn (fail-closed).
     """
     demo = load_config().get("security", {}).get("demo_sleutel")
     is_demo = not os.environ.get(SLEUTEL_ENV) and bool(demo)
+    if is_demo:
+        echt = [p.name for p in bestanden if not is_demo_bestand(p)]
+        if echt:
+            return Sleutelstatus(
+                None, is_demo, DEMO_SLEUTEL_WEIGERING.format(", ".join(echt))
+            )
     try:
         return Sleutelstatus(laad_sleutel(demo if is_demo else None), is_demo, None)
     except ValueError as fout:

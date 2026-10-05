@@ -91,6 +91,12 @@ combinatie van VLPBEK, DEFBEK en HISBEK.
     geef je een bestand mee met `--sleutelbestand`. Gebruik dezelfde sleutel als in
     [1cijferho](https://github.com/cedanl/1cijferho), dan kun je beide koppelen.
 
+    Zonder deze variabele gebruikt de app de demo-sleutel uit `app/config.toml`, maar
+    **alleen voor de synthetische demo-data** (BRIN `99XX` in de bestandsnaam én in het
+    voorlooprecord). Die sleutel is openbaar, dus een pseudoniem ermee is terug te rekenen.
+    Staat er een ander bestand in de invoermap, dan verwerkt de app niets en noemt hij het
+    bestand.
+
 ### De bestandsnaam
 
 De tool herkent een bestand aan de naam: `TTTTTT_JJJJ_EEJJMMDD_99XX.csv`.
@@ -132,6 +138,9 @@ uv run ho star (Get-ChildItem data/02-prepared/demo -Directory).FullName --outpu
 | `--output <map>` | `star` | Doelmap; het star schema komt in `<map>/datamodel/`. |
 
 Exitcodes: `0` klaar, `1` invoerfout, `3` kwaliteitsstatus `fail`. Zie [Kwaliteit](kwaliteit.md).
+
+`verwerk` ruimt in de doelmap alleen eigen tabellen van een eerdere verwerking op (zoals
+`BRD.parquet` of `LEVERING.csv`). Andere bestanden in die map blijven staan.
 
 ## Python
 
@@ -176,6 +185,7 @@ zodat de meldingen per bestand niet verloren gaan.
 | *Onbekend bestandstype* | De bestandsnaam voldoet niet aan het patroon. | Hernoem naar `TTTTTT_JJJJ_EEJJMMDD_99XX.csv`. |
 | *Geen voorlooprecord (VLP)* | Het bestand is leeg of beschadigd. | Vraag het bestand opnieuw op bij DUO. |
 | *Geen pseudonimiseringssleutel gevonden* | Er is geen sleutel ingesteld. | Zie het kader *Sleutel voor persoonsnummers*. |
+| *De demo-sleutel is alleen voor de synthetische demo-data* | De app heeft geen eigen sleutel en er staat echte data in de invoermap. | Zet `EENCIJFERHO_ENCRYPT_KEY`; zie het kader *Sleutel voor persoonsnummers*. |
 | *Geen Parquet-bestanden in …* | Het bestand is met `--fmt csv` verwerkt. | Verwerk het opnieuw zonder `--fmt csv`. |
 | *Leveringslabel(s) komen meer dan eens voor* | Twee prepared-mappen hebben dezelfde naam. | Geef elke map een eigen naam. |
 | *Deels wel en deels niet gepseudonimiseerd* | Leveringen zijn met verschillende keuzes verwerkt. | Verwerk ze allemaal met dezelfde keuze. |

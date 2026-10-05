@@ -108,7 +108,7 @@ pseudonimiseer = st.checkbox(
     value=True,
     key="pseudonimiseer",
 )
-sleutelstatus = pseudonimiseringssleutel()
+sleutelstatus = pseudonimiseringssleutel(bestanden)
 if not pseudonimiseer:
     st.warning(GEEN_PSEUDONIMISERING_MELDING)
 elif sleutelstatus.fout:
