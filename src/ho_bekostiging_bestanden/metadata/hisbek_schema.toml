@@ -31,19 +31,23 @@ bool_fields = [
 ]
 int_fields = ["Bekostigingsjaar", "Bekostigingsduur"]
 float_fields = ["ECTS", "ECTSBekostigd"]
+# HRD bevat alleen beoordeelde deelnames (§19.5); daarvoor is de
+# nationaliteitsindicator volgens de PvE altijd gevuld.
 required_fields = [
     "Recordsoort", "Bekostigingsjaar", "BRIN", "Bekostigingsindicatie",
     "CodeBekostigingstatus", "Opleidingscode", "Opleidingsniveau",
-    "Opleidingsfase", "DatumInschrijving", "EersteInschrijving",
-    "Inschrijvingsvorm", "Onderwijsvorm",
+    "Opleidingsfase", "DatumInschrijving", "DatumUitschrijving",
+    "EersteInschrijving", "Inschrijvingsvorm", "Onderwijsvorm",
+    "IndicatieNationaliteitsvoorwaardeSF",
 ]
 
+# HISBEK kent ook A (auditor) en T (toegelaten student); BRD alleen E/S.
 [HRD.codelijsten]
 CodeBekostigingstatus = "bekostigingstatus"
 Bekostigingsniveau    = "bekostigingsniveau"
 Opleidingsniveau      = "opleidingsniveau"
 Opleidingsfase        = "opleidingsfase"
-Inschrijvingsvorm     = "inschrijvingsvorm"
+Inschrijvingsvorm     = "inschrijvingsvorm_hisbek"
 Onderwijsvorm         = "onderwijsvorm"
 OpleidingOnderdeel    = "opleidingonderdeel"
 Bekostigingscode      = "bekostigingscode"
@@ -74,7 +78,7 @@ float_fields = ["JointDegreeFactor"]
 required_fields = [
     "Recordsoort", "Bekostigingsjaar", "BRIN", "Bekostigingsindicatie",
     "CodeBekostigingstatus", "JointDegreeFactor", "Opleidingscode",
-    "Opleidingsniveau", "Opleidingsfase", "EersteGraad",
+    "Opleidingsniveau", "Opleidingsfase", "EersteGraad", "Onderwijsvorm",
     "IndicatieGraadTeltVoorBekostigingsloopbaan",
     "IndicatieNationaliteitsvoorwaardeSF",
 ]

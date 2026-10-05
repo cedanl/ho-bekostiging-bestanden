@@ -96,7 +96,7 @@ CLI-commando `ho`.
 | `metadata/analyse_schema.toml` | Veldindeling VLP/BLB (oud en nieuw)/BRD/BRR/SLR, met `date_fields`, `bool_fields` en `int_fields` (zelfde vorm als `ro_schema.toml` bij MBO) |
 | `metadata/hisbek_schema.toml` | Veldindeling VLP/HRD/HRR/SLR |
 | `metadata/bekostigingstatus.csv` | 34 codes: `Code`, `Omschrijving`, `Groep`, `Bekostigd` (J/N). De omschrijvingen komen uit de PvE (§19.7.5) **[Bevestigd]**. De groepsindeling komt uit rapport-bijlage B en is een eigen indeling, **niet van DUO** **[Te checken]** |
-| `metadata/*.csv` (overige codelijsten) | Opleidingsniveau, opleidingsfase, onderwijsvorm, inschrijvingsvorm, bekostigingsniveau, opleidingsonderdeel, bekostigingscode, IndicatieBaMa (waardelijsten uit de PvE) |
+| `metadata/*.csv` (overige codelijsten) | Opleidingsniveau, opleidingsfase, onderwijsvorm, inschrijvingsvorm (HISBEK: `inschrijvingsvorm_hisbek`, ook A/T), bekostigingsniveau, opleidingsonderdeel, bekostigingscode, IndicatieBaMa (waardelijsten uit de PvE) |
 | `metadata/__init__.py` | `load_schema(naam)`, `load_codelijst(naam)` |
 | `ingest.py` | Generieke multi-record-reader die splitst per recordsoort en regels afknipt of aanvult tot het schema. `parse_bestandsnaam()` geeft levering, jaar, aanmaakdatum en BRIN. |
 | `decode.py` | Typen omzetten: datums (ongeldig wordt `null` en de ruwe waarde blijft in `<Veld>_Ruw`), J/N naar boolean, getallen, `-1` naar `null` met een vlag `<Veld>_NVT`, `CodeBekostigingstatus` blijft tekst (bijvoorbeeld `na,ti`), zodat CSV-export werkt; de brugtabel in het star schema splitst de codes |

@@ -29,6 +29,10 @@ VOORLOPIG = [(2025, date(2024, 1, 15)), (2026, date(2025, 1, 15))]
 DEFINITIEF = [(2025, date(2024, 7, 15))]
 HISBEK = (2024, date(2025, 3, 1))
 HISBEK_JAREN = (2021, 2022, 2023, 2024)
+# PvE §19.7.2/3: DuitseDeelstaat en IndicatieWoonplaatsVereiste zijn alleen
+# gevuld van 2011 t/m 2014. ECTS en ECTSBekostigd alleen voor OU-deelnames;
+# de demo-instelling is geen OU, dus die blijven leeg.
+WOONPLAATS_JAREN = range(2011, 2015)
 
 # Fictieve opleidingen: (code, niveau, fase, onderdeel, bekostigingsniveau, BaMa)
 OPLEIDINGEN = [
@@ -269,32 +273,40 @@ def _analysebestand(
     return regels
 
 
+def _woonplaatsvereiste(jaar: int, voldoet: bool) -> str:
+    return _jn(voldoet) if jaar in WOONPLAATS_JAREN else ""
+
+
 def _hisbek(rng: random.Random, personen: list[_Persoon], aanmaak: date) -> list[str]:
     regels = [maak_regel("hisbek", "VLP", BRIN=BRIN_EIGEN, DatumAanmaak=_d(aanmaak))]
     tel = {"HRD": 0, "HRR": 0}
     for p in personen:
+        # (jaar, volgorde binnen het jaar, regel); de PvE sorteert per persoon
+        # aflopend op bekostigingsjaar (§19.5).
+        records: list[tuple[int, int, str]] = []
         for jaar in HISBEK_JAREN:
             if (p.nr + jaar) % HISBEK_OVERSLAAN == 0:
                 continue
             status = _kies(rng, DEELNAME_STATUS)
             codes = set(status.split(","))
-            ects = "60.0" if status in BEKOSTIGD else ""
             waarden = _deelname(p, BRIN_EIGEN, jaar, status) | {
                 "Bekostigingsjaar": str(jaar),
-                "ECTS": ects,
-                "ECTSBekostigd": ects,
-                "IndicatieWoonplaatsVereiste": _jn("na" not in codes),
+                "IndicatieWoonplaatsVereiste": _woonplaatsvereiste(
+                    jaar, "na" not in codes
+                ),
             }
-            regels.append(maak_regel("hisbek", "HRD", **waarden))
+            records.append((jaar, 0, maak_regel("hisbek", "HRD", **waarden)))
             tel["HRD"] += 1
         if p.nr % HISBEK_GRAAD_ELKE == 0:
             jaar = HISBEK_JAREN[-1]
             waarden = _resultaat(p, jaar, "pg") | {
                 "Bekostigingsjaar": str(jaar),
-                "IndicatieWoonplaatsVereiste": "J",
+                "IndicatieWoonplaatsVereiste": _woonplaatsvereiste(jaar, True),
             }
-            regels.append(maak_regel("hisbek", "HRR", **waarden))
+            records.append((jaar, 1, maak_regel("hisbek", "HRR", **waarden)))
             tel["HRR"] += 1
+        records.sort(key=lambda r: (-r[0], r[1]))
+        regels += [regel for _, _, regel in records]
     regels.append(
         maak_regel(
             "hisbek", "SLR", **{f"Aantal{rs}records": str(n) for rs, n in tel.items()}
