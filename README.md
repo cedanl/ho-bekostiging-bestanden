@@ -22,8 +22,7 @@ Zie in ruim een minuut hoe de app werkt: bestanden verwerken, het dashboard en d
 resultaten. De video gebruikt de synthetische demo-data.
 
 
-
-https://github.com/user-attachments/assets/5e639123-613a-499b-ae2f-862a5fd063da
+https://github.com/user-attachments/assets/9e2d128d-70da-4689-acc9-d22efbaf1c94
 
 
 
