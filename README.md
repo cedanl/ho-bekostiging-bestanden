@@ -11,7 +11,7 @@ en per graad of die bekostigd wordt, en zo niet, waarom niet. De bestanden zijn 
 decodeert en controleert ze, en maakt er een star schema van waarop andere
 CEDA-projecten kunnen voortbouwen.
 
-Dit is de HO-tegenhanger van
+Dit is de MBO-tegenhanger van
 [mbo-bekostiging-bestanden](https://github.com/cedanl/mbo-bekostiging-bestanden).
 
 Doelgroep: analisten en onderzoekers bij HO-instellingen die met bekostigingsdata werken.
